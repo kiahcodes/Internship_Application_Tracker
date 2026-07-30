@@ -1,0 +1,139 @@
+.hero-box {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  text-align: center;
+  overflow: hidden;
+}
+
+.hero-background {
+  position: absolute;
+  inset: 0;
+}
+
+.hero-background::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("../assets/hero.jpeg");
+  background-size: cover;
+  background-position: center;
+  opacity: 0.7;
+}
+
+.hero-content {
+  position: relative;
+  z-index: 5;
+  min-height: 100vh;
+  width: 100%;
+  padding: 6rem 1.5rem 3rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 1.5rem;
+  animation: fadeIn 1.2s ease-in-out;
+}
+
+.text {
+  color: #36200d;
+  font-size: 3.5rem;
+  line-height: 1.15;
+  max-width: 850px;
+  font-weight: 800;
+  transition:
+    transform 0.3s ease,
+    text-shadow 0.3s ease;
+}
+
+.text:hover {
+  transform: scale(1.02);
+  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+}
+
+.ptext {
+  color: #36200d;
+  font-size: 1.15rem;
+  max-width: 600px;
+  line-height: 1.6;
+}
+
+.hero-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 0.5rem;
+}
+
+.btn {
+  display: inline-block;
+  padding: 0.85rem 1.8rem;
+  border: 0.15rem solid #36200d;
+  border-radius: 1.2rem;
+  font-size: 1rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease,
+    background 0.25s ease;
+}
+
+.btn-primary {
+  background: #0e6818;
+  color: #ffffff;
+}
+
+.btn-primary:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(125, 106, 50, 0.5);
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  border: 1.5px solid rgba(255, 255, 255, 0.6);
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateY(-3px);
+}
+
+@media (max-width: 768px) {
+  .text {
+    font-size: 2.4rem;
+  }
+
+  .ptext {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .text {
+    font-size: 1.9rem;
+  }
+
+  .btn {
+    width: 100%;
+  }
+
+  .hero-buttons {
+    flex-direction: column;
+    width: 100%;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

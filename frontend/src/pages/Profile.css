@@ -1,0 +1,83 @@
+.profile-page {
+  min-height: 100vh;
+  padding: 7rem 2rem 4rem;
+  background: #f0e5db;
+  display: flex;
+  justify-content: center;
+}
+
+.profile-card {
+  width: 100%;
+  max-width: 420px;
+  background: #ffffff;
+  border-radius: 14px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+  padding: 2.5rem 2rem;
+  text-align: center;
+}
+
+.profile-avatar {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 1rem;
+  border-radius: 50%;
+  background: #0e6818;
+  color: #ffffff;
+  font-size: 2rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-name {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 0.25rem;
+}
+
+.profile-course {
+  color: #465748;
+  margin: 0 0 1rem;
+}
+
+.profile-bio {
+  color: #465748;
+  line-height: 1.6;
+  margin-bottom: 1.5rem;
+}
+
+.profile-detail {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.6rem 0;
+  border-top: 1px solid #e5e7eb;
+  font-size: 0.95rem;
+}
+
+.detail-label {
+  color: #465748;
+  font-weight: 600;
+}
+
+.detail-value {
+  color: #465748;
+}
+
+.profile-skills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-top: 1.5rem;
+}
+
+.skill-badge {
+  background: #2dbe3e3f;
+  color: #0e6818;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+}
