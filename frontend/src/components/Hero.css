@@ -35,6 +35,36 @@
   animation: fadeIn 1.2s ease-in-out;
 }
 
+.hero-greeting {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(54, 32, 13, 0.15);
+  backdrop-filter: blur(4px);
+  color: #36200d;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  padding: 0.4rem 1rem 0.4rem 0.4rem;
+  border-radius: 999px;
+  margin: 0;
+}
+
+.hero-greeting-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #0e6818;
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
 .text {
   color: #36200d;
   font-size: 3.5rem;
@@ -66,7 +96,7 @@
   margin-top: 0.5rem;
 }
 
-.btn {
+.button-primary {
   display: inline-block;
   padding: 0.85rem 1.8rem;
   border: 0.15rem solid #36200d;
@@ -79,25 +109,22 @@
     transform 0.25s ease,
     box-shadow 0.25s ease,
     background 0.25s ease;
-}
-
-.btn-primary {
   background: #0e6818;
   color: #ffffff;
 }
 
-.btn-primary:hover {
+.button-primary:hover {
   transform: translateY(-3px);
   box-shadow: 0 8px 20px rgba(125, 106, 50, 0.5);
 }
 
-.btn-secondary {
+.button-secondary {
   background: rgba(255, 255, 255, 0.15);
   color: #ffffff;
   border: 1.5px solid rgba(255, 255, 255, 0.6);
 }
 
-.btn-secondary:hover {
+.button-secondary:hover {
   background: rgba(255, 255, 255, 0.25);
   transform: translateY(-3px);
 }
@@ -117,7 +144,7 @@
     font-size: 1.9rem;
   }
 
-  .btn {
+  .button-primary {
     width: 100%;
   }
 

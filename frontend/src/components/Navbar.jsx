@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { NavLink } from "react-router-dom";
+import logo from "../assets/logo.png";
 import "./Navbar.css";
 
 export function Navbar() {
@@ -8,8 +9,9 @@ export function Navbar() {
   const closeMenu = () => setIsOpen(false);
 
   return (
-    <nav className="navbar">
+    <nav className="custom-navbar">
       <NavLink to="/" className="logo" onClick={closeMenu}>
+        <img src={logo} alt="logo" className="logo-img" />
         Campus2Career
       </NavLink>
 

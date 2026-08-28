@@ -3,6 +3,8 @@ import { Navbar } from "./components/Navbar.jsx";
 import { Home } from "./pages/Home.jsx";
 import { Internship } from "./pages/Internship.jsx";
 import { Profile } from "./pages/Profile.jsx";
+import { LoginPage } from "./pages/LoginPage.jsx";
+import { SignupPage } from "./pages/SignupPage.jsx";
 import "./App.css";
 
 function App() {
@@ -10,7 +12,9 @@ function App() {
     <main className="main">
       <Navbar />
       <Routes>
-        <Route path="/" element={<Home />} />
+        <Route path="/" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
+        <Route path="/home" element={<Home />} />
         <Route path="/internships" element={<Internship />} />
         <Route path="/profile" element={<Profile />} />
       </Routes>

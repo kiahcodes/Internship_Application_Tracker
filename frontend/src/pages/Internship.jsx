@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./Internship.css";
 
 const dummyData = [
@@ -41,6 +41,8 @@ const dummyData = [
 
 export function Internship() {
   const [internships, setInternships] = useState(dummyData);
+  const [userCity, setUserCity] = useState("");
+  const [locationStatus, setLocationStatus] = useState("loading");
 
   function toggleApply(id) {
     const updated = internships.map((item) =>
@@ -49,11 +51,69 @@ export function Internship() {
     setInternships(updated);
   }
 
+  function detectLocation() {
+    setLocationStatus("loading");
+    requestLocation();
+  }
+
+  function requestLocation() {
+    if (!navigator.geolocation) {
+      setLocationStatus("error");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async ({ coords }) => {
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${coords.latitude}&lon=${coords.longitude}`,
+          );
+          const data = await res.json();
+          const city =
+            data?.address?.city ||
+            data?.address?.town ||
+            data?.address?.state ||
+            "your area";
+          setUserCity(city);
+          setLocationStatus("done");
+        } catch {
+          setLocationStatus("error");
+        }
+      },
+      () => setLocationStatus("denied"),
+    );
+  }
+
+  useEffect(() => {
+    requestLocation();
+  }, []);
+
+  const sortedInternships = userCity
+    ? [...internships].sort((a, b) => {
+        const aNear = a.location.toLowerCase().includes(userCity.toLowerCase());
+        const bNear = b.location.toLowerCase().includes(userCity.toLowerCase());
+        return Number(bNear) - Number(aNear);
+      })
+    : internships;
+
   return (
     <section className="internship-page">
       <h1 className="internship-title">Internship Opportunities</h1>
+      <p className="location-subtitle">
+        {locationStatus === "loading" && "Finding internships near you…"}
+        {locationStatus === "done" &&
+          `Showing internships near ${userCity} first`}
+        {(locationStatus === "denied" || locationStatus === "error") && (
+          <>
+            Enable location to see internships near you first —{" "}
+            <button className="location-retry" onClick={detectLocation}>
+              try again
+            </button>
+          </>
+        )}
+      </p>
       <div className="internship-grid">
-        {internships.map((item) => (
+        {sortedInternships.map((item) => (
           <article className="internship-card" key={item.id}>
             <div className="card-header">
               <h2 className="company-name">{item.company}</h2>

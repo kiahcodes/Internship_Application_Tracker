@@ -1,0 +1,46 @@
+.btn {
+  display: inline-block;
+  /* padding: 0.85rem 1.8rem; */
+  border: 0.15rem;
+  border-radius: 1.2rem;
+  font-size: 1rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease,
+    background 0.25s ease;
+}
+.btn-primary {
+  background: #0e6818;
+  color: #ffffff;
+}
+.form-control {
+  background-color: #e5f3e7;
+  border: 2px solid #0e6818;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.form-control:focus {
+  background-color: #e5f3e7;
+  border-color: #0e6818;
+  box-shadow: 0 0 0 0.2rem rgba(14, 104, 24, 0.2);
+}
+
+.form-control::placeholder {
+  color: #999;
+}
+.form-control:-webkit-autofill,
+.form-control:-webkit-autofill:hover,
+.form-control:-webkit-autofill:focus {
+  -webkit-text-fill-color: #000;
+  -webkit-box-shadow: 0 0 0px 1000px #f4f9f5 inset;
+  box-shadow: 0 0 0px 1000px #f4f9f5 inset;
+}
+.bg {
+  min-height: 100vh;
+  padding: 7rem 2rem 4rem;
+  background: #f0e5db;
+}
