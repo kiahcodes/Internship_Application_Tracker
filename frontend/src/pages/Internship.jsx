@@ -43,6 +43,7 @@ export function Internship() {
   const [internships, setInternships] = useState(dummyData);
   const [userCity, setUserCity] = useState("");
   const [locationStatus, setLocationStatus] = useState("loading");
+  const [query, setQuery] = useState("");
 
   function toggleApply(id) {
     const updated = internships.map((item) =>
@@ -96,40 +97,114 @@ export function Internship() {
       })
     : internships;
 
+  const visibleInternships = sortedInternships.filter((item) => {
+    const q = query.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      item.company.toLowerCase().includes(q) ||
+      item.role.toLowerCase().includes(q) ||
+      item.location.toLowerCase().includes(q)
+    );
+  });
+
   return (
     <section className="internship-page">
-      <h1 className="internship-title">Internship Opportunities</h1>
-      <p className="location-subtitle">
-        {locationStatus === "loading" && "Finding internships near you…"}
-        {locationStatus === "done" &&
-          `Showing internships near ${userCity} first`}
-        {(locationStatus === "denied" || locationStatus === "error") && (
-          <>
-            Enable location to see internships near you first —{" "}
-            <button className="location-retry" onClick={detectLocation}>
-              try again
-            </button>
-          </>
-        )}
-      </p>
+      <div className="internship-header">
+        <h1 className="internship-title">Internship Opportunities</h1>
+        <p className="location-subtitle">
+          {locationStatus === "loading" && "Finding internships near you…"}
+          {locationStatus === "done" &&
+            `Showing internships near ${userCity} first`}
+          {(locationStatus === "denied" || locationStatus === "error") && (
+            <>
+              Enable location to see internships near you first —{" "}
+              <button className="location-retry" onClick={detectLocation}>
+                try again
+              </button>
+            </>
+          )}
+        </p>
+      </div>
+
+      <div className="internship-toolbar">
+        <div className="search-field">
+          <svg
+            className="search-icon"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+          >
+            <circle cx="11" cy="11" r="7" />
+            <path d="M21 21l-4.3-4.3" />
+          </svg>
+          <input
+            type="text"
+            className="search-input"
+            placeholder="Search by company, role, or location"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </div>
+        <span className="results-count">
+          Showing {visibleInternships.length} of {internships.length}
+        </span>
+      </div>
+
       <div className="internship-grid">
-        {sortedInternships.map((item) => (
+        {visibleInternships.map((item) => (
           <article className="internship-card" key={item.id}>
             <div className="card-header">
-              <h2 className="company-name">{item.company}</h2>
-              {/* <span
-                className={`badge ${item.applied ? "badge-applied" : "badge-not-applied"}`}
-              >
-                {item.applied ? "Applied" : "Not Applied"}
-              </span> */}
+              <div className="company-logo">{item.company.charAt(0)}</div>
+              <div>
+                <h2 className="company-name">{item.company}</h2>
+                <p className="role">{item.role}</p>
+              </div>
             </div>
-            <p className="role">{item.role}</p>
-            <p className="location">📍{item.location}</p>
-            <button className="apply-btn" onClick={() => toggleApply(item.id)}>
+
+            <p className="location">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+              >
+                <path d="M12 21s7-6.1 7-11.5A7 7 0 0 0 5 9.5C5 14.9 12 21 12 21Z" />
+                <circle cx="12" cy="9.5" r="2.4" />
+              </svg>
+              {item.location}
+            </p>
+
+            <button
+              className={`apply-btn ${item.applied ? "apply-btn-applied" : ""}`}
+              onClick={() => toggleApply(item.id)}
+            >
+              {item.applied && (
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                >
+                  <path d="M20 6 9 17l-5-5" />
+                </svg>
+              )}
               {item.applied ? "Applied" : "Apply"}
             </button>
           </article>
         ))}
+
+        {visibleInternships.length === 0 && (
+          <p className="no-results">
+            No internships match &ldquo;{query}&rdquo;.
+          </p>
+        )}
       </div>
     </section>
   );

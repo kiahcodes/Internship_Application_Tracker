@@ -1,3 +1,17 @@
+:root {
+  --c2c-cream: #f7f0e6;
+  --c2c-surface: #fffdf9;
+  --c2c-ink: #2a1c0f;
+  --c2c-ink-soft: #6b5a45;
+  --c2c-line: #e4d8c4;
+  --c2c-green: #0e6818;
+  --c2c-green-deep: #0a4f12;
+  --c2c-green-tint: #e5f3e7;
+  --font-display: "Newsreader", Georgia, "Times New Roman", serif;
+  --font-body:
+    "Plus Jakarta Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+
 html,
 body,
 #root {
@@ -9,6 +23,16 @@ body,
 
 * {
   box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-body);
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
 }
 
 .main {

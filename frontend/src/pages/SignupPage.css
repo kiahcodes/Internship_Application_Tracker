@@ -1,8 +1,0 @@
-.signup-input:-webkit-autofill,
-.signup-input:-webkit-autofill:hover,
-.signup-input:-webkit-autofill:focus {
-  -webkit-text-fill-color: #000;
-  -webkit-box-shadow: 0 0 0px 1000px #e5f3e7 inset;
-  box-shadow: 0 0 0px 1000px #e5f3e7 inset;
-  transition: background-color 5000s ease-in-out 0s;
-}

@@ -1,0 +1,190 @@
+.resume-card {
+  width: 100%;
+  background: var(--c2c-surface, #fffdf9);
+  border: 1px solid var(--c2c-line, #e4d8c4);
+  border-radius: 20px;
+  box-shadow: 0 14px 40px rgba(42, 28, 15, 0.08);
+  padding: 2.5rem 2rem;
+}
+
+.resume-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+
+.resume-title {
+  font-family: var(--font-display, "Newsreader", Georgia, serif);
+  font-size: 1.35rem;
+  font-weight: 500;
+  color: var(--c2c-ink, #2a1c0f);
+  margin: 0 0 0.2rem;
+}
+
+.resume-subtitle {
+  font-size: 0.85rem;
+  color: var(--c2c-ink-soft, #6b5a45);
+  margin: 0;
+}
+
+.resume-upload-btn {
+  margin-top: 0;
+  white-space: nowrap;
+}
+
+.resume-file-input {
+  display: none;
+}
+
+.resume-error {
+  background: rgba(185, 28, 28, 0.08);
+  color: #b91c1c;
+  font-size: 0.85rem;
+  padding: 0.65rem 0.9rem;
+  border-radius: 8px;
+  margin: 0 0 1.25rem;
+}
+
+.resume-empty {
+  color: var(--c2c-ink-soft, #6b5a45);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.resume-current {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  background: var(--c2c-green-tint, #e5f3e7);
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+}
+
+.resume-file-icon {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 9px;
+  background: var(--c2c-green, #0e6818);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.resume-file-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.resume-file-name {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--c2c-ink, #2a1c0f);
+  margin: 0 0 0.15rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resume-file-detail {
+  font-size: 0.78rem;
+  color: var(--c2c-ink-soft, #6b5a45);
+  margin: 0;
+}
+
+.resume-download-link {
+  flex-shrink: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--c2c-green-deep, #0a4f12);
+  text-decoration: none;
+}
+
+.resume-download-link:hover {
+  text-decoration: underline;
+}
+
+.resume-history {
+  margin-top: 1.5rem;
+  border-top: 1px solid var(--c2c-line, #e4d8c4);
+  padding-top: 1.25rem;
+}
+
+.resume-history-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--c2c-ink-soft, #6b5a45);
+  margin: 0 0 0.75rem;
+}
+
+.resume-history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.resume-history-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.7rem 0.9rem;
+  border-radius: 9px;
+  background: #faf5ec;
+}
+
+.resume-history-meta {
+  min-width: 0;
+}
+
+.resume-history-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.resume-history-actions button,
+.resume-history-actions a {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--c2c-green-deep, #0a4f12);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.resume-history-actions button:hover,
+.resume-history-actions a:hover {
+  text-decoration: underline;
+}
+
+.resume-remove {
+  color: #b91c1c !important;
+}
+
+@media (max-width: 480px) {
+  .resume-card {
+    padding: 2rem 1.25rem;
+  }
+
+  .resume-current {
+    flex-wrap: wrap;
+  }
+
+  .resume-download-link {
+    margin-left: calc(38px + 0.9rem);
+  }
+}

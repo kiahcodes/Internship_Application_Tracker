@@ -1,17 +1,26 @@
 .profile-page {
   min-height: 100vh;
   padding: 7rem 2rem 4rem;
-  background: #f0e5db;
+  background: #f7f0e6;
   display: flex;
   justify-content: center;
 }
 
+.profile-layout {
+  width: 100%;
+  max-width: 860px;
+  display: grid;
+  grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
+  gap: 2rem;
+  align-items: start;
+}
+
 .profile-card {
   width: 100%;
-  max-width: 420px;
-  background: #ffffff;
-  border-radius: 14px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+  background: #fffdf9;
+  border: 1px solid #e4d8c4;
+  border-radius: 20px;
+  box-shadow: 0 14px 40px rgba(42, 28, 15, 0.08);
   padding: 2.5rem 2rem;
   text-align: center;
 }
@@ -23,27 +32,29 @@
   border-radius: 50%;
   background: #0e6818;
   color: #ffffff;
+  font-family: var(--font-display, "Newsreader", Georgia, serif);
   font-size: 2rem;
-  font-weight: 700;
+  font-weight: 500;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .profile-name {
+  font-family: var(--font-display, "Newsreader", Georgia, serif);
   font-size: 1.5rem;
-  font-weight: 700;
-  color: #1f2937;
+  font-weight: 500;
+  color: #2a1c0f;
   margin: 0 0 0.25rem;
 }
 
 .profile-course {
-  color: #465748;
+  color: #6b5a45;
   margin: 0 0 1rem;
 }
 
 .profile-bio {
-  color: #465748;
+  color: #6b5a45;
   line-height: 1.6;
   margin-bottom: 1.5rem;
 }
@@ -52,17 +63,17 @@
   display: flex;
   justify-content: space-between;
   padding: 0.6rem 0;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid #e4d8c4;
   font-size: 0.95rem;
 }
 
 .detail-label {
-  color: #465748;
+  color: #6b5a45;
   font-weight: 600;
 }
 
 .detail-value {
-  color: #465748;
+  color: #6b5a45;
 }
 
 .profile-skills {
@@ -89,7 +100,9 @@
   font-weight: 600;
   padding: 0.6rem 1.4rem;
   cursor: pointer;
-  transition: background 0.2s ease, transform 0.1s ease;
+  transition:
+    background 0.2s ease,
+    transform 0.1s ease;
 }
 
 .btn:active {
@@ -122,17 +135,17 @@
 .form-label {
   font-size: 0.85rem;
   font-weight: 600;
-  color: #465748;
+  color: #6b5a45;
 }
 
 .form-field input,
 .form-field textarea {
   font: inherit;
   padding: 0.55rem 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  color: #1f2937;
-  background: #ffffff;
+  border: 1.5px solid #e4d8c4;
+  border-radius: 9px;
+  color: #2a1c0f;
+  background: #faf5ec;
   resize: vertical;
 }
 
@@ -160,11 +173,18 @@
 }
 
 .btn-cancel {
-  background: #e5e7eb;
-  color: #1f2937;
+  background: #efe4d2;
+  color: #2a1c0f;
   flex: 1;
 }
 
 .btn-cancel:hover {
-  background: #d1d5db;
+  background: #e4d8c4;
+}
+
+@media (max-width: 768px) {
+  .profile-layout {
+    grid-template-columns: 1fr;
+    max-width: 420px;
+  }
 }

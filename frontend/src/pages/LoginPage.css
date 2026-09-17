@@ -42,5 +42,73 @@
 .bg {
   min-height: 100vh;
   padding: 7rem 2rem 4rem;
-  background: #f0e5db;
+  background: #f7f0e6;
+  display: flex;
+  justify-content: center;
+}
+
+.auth-form-panel h2 {
+  color: #2a1c0f;
+}
+
+.auth-shell {
+  width: 100%;
+  max-width: 960px;
+  display: flex;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 20px 50px rgba(42, 28, 15, 0.12);
+}
+
+.auth-visual {
+  flex: 1;
+  min-width: 0;
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: flex-end;
+}
+
+.auth-visual-overlay {
+  width: 100%;
+  padding: 2.5rem;
+  background: linear-gradient(
+    180deg,
+    rgba(28, 42, 18, 0) 0%,
+    rgba(28, 42, 18, 0.85) 100%
+  );
+}
+
+.auth-quote {
+  font-family: var(--font-display, "Newsreader", Georgia, serif);
+  font-size: 1.3rem;
+  line-height: 1.4;
+  color: #f7f0e6;
+  margin: 0 0 0.75rem;
+}
+
+.auth-quote-by {
+  font-size: 0.85rem;
+  color: #d8cfba;
+  margin: 0;
+}
+
+.auth-form-panel {
+  flex: 1;
+  min-width: 0;
+  background: #fffdf9;
+  display: flex;
+  align-items: center;
+  padding: 3rem 1rem;
+}
+
+@media (max-width: 767px) {
+  .auth-shell {
+    flex-direction: column;
+    max-width: 480px;
+  }
+
+  .auth-visual {
+    min-height: 220px;
+  }
 }

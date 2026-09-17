@@ -35,6 +35,19 @@
   animation: fadeIn 1.2s ease-in-out;
 }
 
+.hero-content::before {
+  content: "";
+  position: absolute;
+  inset: -10% -15%;
+  z-index: -1;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(247, 240, 230, 0.6) 0%,
+    rgba(247, 240, 230, 0.15) 55%,
+    rgba(247, 240, 230, 0) 75%
+  );
+}
+
 .hero-greeting {
   display: inline-flex;
   align-items: center;

@@ -1,5 +1,5 @@
 .home-page {
   width: 100%;
   min-height: 100vh;
-  background: #f8fafc;
+  background: var(--c2c-cream, #f7f0e6);
 }

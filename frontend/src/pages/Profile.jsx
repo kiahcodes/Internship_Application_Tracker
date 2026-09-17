@@ -1,6 +1,7 @@
 import { useState } from "react";
 import "./Profile.css";
 import { STUDENT_STORAGE_KEY, loadStudent } from "../utils/student";
+import { ResumeManager } from "../components/ResumeManager.jsx";
 
 export function Profile() {
   const [student, setStudent] = useState(loadStudent);
@@ -31,6 +32,7 @@ export function Profile() {
 
   return (
     <section className="profile-page">
+      <div className="profile-layout">
       <div className="profile-card">
         <div className="profile-avatar">{student.name.charAt(0)}</div>
 
@@ -144,6 +146,9 @@ export function Profile() {
             </button>
           </>
         )}
+      </div>
+
+      <ResumeManager />
       </div>
     </section>
   );
