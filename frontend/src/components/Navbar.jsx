@@ -63,6 +63,11 @@ export function Navbar() {
           </NavLink>
         </li>
         <li>
+          <NavLink to="/drag-drop" onClick={closeMenu}>
+            Tracker
+          </NavLink>
+        </li>
+        <li>
           {loggedIn ? (
             <button type="button" className="nav-auth-btn" onClick={handleLogout}>
               Logout

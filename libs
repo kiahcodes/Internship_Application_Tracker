@@ -1,3 +1,11 @@
 npx shadcn@latest add @react-bits/GooeyNav-JS-CSS
 
 npm install bootstrap
+
+Installed vue (v3) and aliased it in vite.config.js to the compiler-included build (vue/dist/vue.esm-bundler.js) — Vite's default alias is runtime-only and silently can't run string templates, which is why the first test run failed until I fixed this.
+VueDirectives.jsx mounts a genuine createApp() Vue instance into a React-owned <div> via useRef/useEffect (unmounted on cleanup) — this is real Vue running inside your React app, not a reimplementation.
+I. v-uppercase — click handler in mounted() that uppercases el.textContent.
+II. Dynamic list — a reactive items array driving v-for, with a v-highlight directive (using mounted/updated hooks) that alternates row styling as items are added/removed — demonstrates the directive re-running against dynamically inserted DOM nodes.
+III. v-format-date — takes the raw ISO date via binding.value and renders it with Intl-backed toLocaleDateString.
+Wired into App.jsx (/vue-directives route) and the Navbar ("Vue Lab" link).
+One tradeoff worth knowing: this bundles all of Vue into your React app's JS (build output jumped from ~251KB to ~430KB) since it's a genuinely separate framework runtime living alongside React, not free.
