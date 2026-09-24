@@ -226,3 +226,13 @@
     max-width: none;
   }
 }
+
+.distance {
+  margin-left: auto;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  background: #eef7ef;
+  color: var(--c2c-green, #0e6818);
+  font-size: 0.78rem;
+  font-weight: 600;
+}

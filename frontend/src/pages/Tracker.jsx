@@ -1,5 +1,5 @@
 import { useState } from "react";
-import "./DragDrop.css";
+import "./Tracker.css";
 
 const COLUMNS = ["Applied", "Interview", "Offer"];
 
@@ -10,14 +10,13 @@ const INITIAL = [
   { id: 4, title: "Backend Intern – Freshworks", status: "Interview" },
 ];
 
-export function DragDrop() {
+export function Tracker() {
   const [cards, setCards] = useState(INITIAL);
   const [dragId, setDragId] = useState(null);
   const [overCol, setOverCol] = useState(null);
   const [files, setFiles] = useState([]);
   const [fileOver, setFileOver] = useState(false);
 
-  // --- Card dragging (dataTransfer carries the card id) ---
   const onDragStart = (e, card) => {
     e.dataTransfer.setData("text/plain", String(card.id));
     e.dataTransfer.effectAllowed = "move";
@@ -40,7 +39,9 @@ export function DragDrop() {
     const id = Number(e.dataTransfer.getData("text/plain"));
     const card = cards.find((c) => c.id === id);
     if (card && card.status !== col) {
-      setCards((prev) => prev.map((c) => (c.id === id ? { ...c, status: col } : c)));
+      setCards((prev) =>
+        prev.map((c) => (c.id === id ? { ...c, status: col } : c)),
+      );
     }
     onDragEnd();
   };
@@ -114,4 +115,4 @@ export function DragDrop() {
   );
 }
 
-export default DragDrop;
+export default Tracker;

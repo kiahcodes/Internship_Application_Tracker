@@ -53,8 +53,8 @@ export function Navbar() {
           </NavLink>
         </li>
         <li>
-          <NavLink to="/profile" onClick={closeMenu}>
-            Profile
+          <NavLink to="/drag-drop" onClick={closeMenu}>
+            Tracker
           </NavLink>
         </li>
         <li>
@@ -63,17 +63,26 @@ export function Navbar() {
           </NavLink>
         </li>
         <li>
-          <NavLink to="/drag-drop" onClick={closeMenu}>
-            Tracker
+          <NavLink to="/profile" onClick={closeMenu}>
+            Profile
           </NavLink>
         </li>
+
         <li>
           {loggedIn ? (
-            <button type="button" className="nav-auth-btn" onClick={handleLogout}>
+            <button
+              type="button"
+              className="nav-auth-btn"
+              onClick={handleLogout}
+            >
               Logout
             </button>
           ) : (
-            <NavLink to="/" className="nav-auth-btn nav-auth-link" onClick={closeMenu}>
+            <NavLink
+              to="/"
+              className="nav-auth-btn nav-auth-link"
+              onClick={closeMenu}
+            >
               Login
             </NavLink>
           )}

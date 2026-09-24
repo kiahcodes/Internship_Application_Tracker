@@ -7,6 +7,8 @@ const dummyData = [
     company: "Google",
     role: "Frontend Intern",
     location: "Bengaluru",
+    lat: 12.9716,
+    lon: 77.5946,
     applied: false,
   },
   {
@@ -14,6 +16,8 @@ const dummyData = [
     company: "Microsoft",
     role: "Software Engineering Intern",
     location: "Hyderabad",
+    lat: 17.385,
+    lon: 78.4867,
     applied: false,
   },
   {
@@ -21,6 +25,8 @@ const dummyData = [
     company: "Amazon",
     role: "SDE Intern",
     location: "Bangalore",
+    lat: 12.9716,
+    lon: 77.5946,
     applied: false,
   },
   {
@@ -28,6 +34,8 @@ const dummyData = [
     company: "Adobe",
     role: "React Developer Intern",
     location: "Noida",
+    lat: 28.5355,
+    lon: 77.391,
     applied: false,
   },
   {
@@ -35,13 +43,24 @@ const dummyData = [
     company: "Infosys",
     role: "Web Development Intern",
     location: "Pune",
+    lat: 18.5204,
+    lon: 73.8567,
     applied: false,
   },
 ];
 
+function distanceKm(lat1, lon1, lat2, lon2) {
+  const rad = (d) => (d * Math.PI) / 180;
+  const a =
+    Math.sin(rad(lat2 - lat1) / 2) ** 2 +
+    Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(rad(lon2 - lon1) / 2) ** 2;
+  return 6371 * 2 * Math.asin(Math.sqrt(a));
+}
+
 export function Internship() {
   const [internships, setInternships] = useState(dummyData);
   const [userCity, setUserCity] = useState("");
+  const [userCoords, setUserCoords] = useState(null);
   const [locationStatus, setLocationStatus] = useState("loading");
   const [query, setQuery] = useState("");
 
@@ -65,6 +84,7 @@ export function Internship() {
 
     navigator.geolocation.getCurrentPosition(
       async ({ coords }) => {
+        setUserCoords({ lat: coords.latitude, lon: coords.longitude });
         try {
           const res = await fetch(
             `https://nominatim.openstreetmap.org/reverse?format=json&lat=${coords.latitude}&lon=${coords.longitude}`,
@@ -89,13 +109,16 @@ export function Internship() {
     requestLocation();
   }, []);
 
-  const sortedInternships = userCity
-    ? [...internships].sort((a, b) => {
-        const aNear = a.location.toLowerCase().includes(userCity.toLowerCase());
-        const bNear = b.location.toLowerCase().includes(userCity.toLowerCase());
-        return Number(bNear) - Number(aNear);
-      })
-    : internships;
+  const withDistance = internships.map((item) => ({
+    ...item,
+    distance: userCoords
+      ? distanceKm(userCoords.lat, userCoords.lon, item.lat, item.lon)
+      : null,
+  }));
+
+  const sortedInternships = userCoords
+    ? [...withDistance].sort((a, b) => a.distance - b.distance)
+    : withDistance;
 
   const visibleInternships = sortedInternships.filter((item) => {
     const q = query.trim().toLowerCase();
@@ -114,7 +137,7 @@ export function Internship() {
         <p className="location-subtitle">
           {locationStatus === "loading" && "Finding internships near you…"}
           {locationStatus === "done" &&
-            `Showing internships near ${userCity} first`}
+            `Showing internships nearest to ${userCity} first`}
           {(locationStatus === "denied" || locationStatus === "error") && (
             <>
               Enable location to see internships near you first —{" "}
@@ -177,6 +200,13 @@ export function Internship() {
                 <circle cx="12" cy="9.5" r="2.4" />
               </svg>
               {item.location}
+              {item.distance !== null && (
+                <span className="distance">
+                  {item.distance < 5
+                    ? "You're here"
+                    : `${Math.round(item.distance)} km away`}
+                </span>
+              )}
             </p>
 
             <button

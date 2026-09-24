@@ -6,7 +6,7 @@ import { Profile } from "./pages/Profile.jsx";
 import { LoginPage } from "./pages/LoginPage.jsx";
 import { SignupPage } from "./pages/SignupPage.jsx";
 import { VueDirectives } from "./pages/VueDirectives.jsx";
-import { DragDrop } from "./pages/DragDrop.jsx";
+import { Tracker } from "./pages/Tracker.jsx";
 import "./App.css";
 
 function App() {
@@ -20,7 +20,7 @@ function App() {
         <Route path="/internships" element={<Internship />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/vue-directives" element={<VueDirectives />} />
-        <Route path="/drag-drop" element={<DragDrop />} />
+        <Route path="/drag-drop" element={<Tracker />} />
       </Routes>
     </main>
   );
