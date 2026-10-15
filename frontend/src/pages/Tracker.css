@@ -29,6 +29,22 @@
   margin-bottom: 0.6rem; cursor: grab; font-size: 0.9rem; color: var(--c2c-ink, #2a1c0f);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
+.dd-card { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
+.dd-remove {
+  border: none; background: none; cursor: pointer; font-size: 1.1rem; line-height: 1;
+  color: var(--c2c-ink-soft, #6b5a45); padding: 0 0.2rem;
+}
+.dd-remove:hover { color: #b91c1c; }
+.dd-add { display: flex; gap: 0.5rem; max-width: 1100px; margin: 0 auto 1.5rem; }
+.dd-add input {
+  flex: 1; padding: 0.6rem 0.8rem; border-radius: 8px;
+  border: 1px solid var(--c2c-line, #e4d8c4); background: #fffdf9;
+}
+.dd-add button {
+  padding: 0.6rem 1.2rem; border: none; border-radius: 8px; cursor: pointer;
+  background: var(--c2c-green, #0e6818); color: #fff; font-weight: 600;
+}
+.dd-error { max-width: 1100px; margin: 0 auto 1rem; color: #b91c1c; font-size: 0.9rem; }
 .dd-card:active { cursor: grabbing; }
 .dd-dragging { opacity: 0.4; }
 .dd-dropzone {

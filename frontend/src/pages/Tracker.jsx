@@ -1,21 +1,46 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { api } from "../utils/api";
 import "./Tracker.css";
 
 const COLUMNS = ["Applied", "Interview", "Offer"];
 
-const INITIAL = [
-  { id: 1, title: "Frontend Intern – Zoho", status: "Applied" },
-  { id: 2, title: "Data Analyst Intern – TCS", status: "Applied" },
-  { id: 3, title: "SDE Intern – Infosys", status: "Applied" },
-  { id: 4, title: "Backend Intern – Freshworks", status: "Interview" },
-];
-
 export function Tracker() {
-  const [cards, setCards] = useState(INITIAL);
+  const [cards, setCards] = useState([]);
+  const [error, setError] = useState("");
+  const [newTitle, setNewTitle] = useState("");
   const [dragId, setDragId] = useState(null);
   const [overCol, setOverCol] = useState(null);
   const [files, setFiles] = useState([]);
   const [fileOver, setFileOver] = useState(false);
+
+  useEffect(() => {
+    api("/tracker")
+      .then(setCards)
+      .catch((err) => setError(err.message));
+  }, []);
+
+  const addCard = async (e) => {
+    e.preventDefault();
+    const title = newTitle.trim();
+    if (!title) return;
+    try {
+      const card = await api("/tracker", { method: "POST", body: { title } });
+      setCards((prev) => [...prev, card]);
+      setNewTitle("");
+      setError("");
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const removeCard = async (id) => {
+    try {
+      await api(`/tracker/${id}`, { method: "DELETE" });
+      setCards((prev) => prev.filter((c) => c.id !== id));
+    } catch (err) {
+      setError(err.message);
+    }
+  };
 
   const onDragStart = (e, card) => {
     e.dataTransfer.setData("text/plain", String(card.id));
@@ -39,8 +64,15 @@ export function Tracker() {
     const id = Number(e.dataTransfer.getData("text/plain"));
     const card = cards.find((c) => c.id === id);
     if (card && card.status !== col) {
-      setCards((prev) =>
-        prev.map((c) => (c.id === id ? { ...c, status: col } : c)),
+      const previous = card.status;
+      const setStatus = (status) =>
+        setCards((prev) => prev.map((c) => (c.id === id ? { ...c, status } : c)));
+      setStatus(col); // optimistic; roll back if the server rejects it
+      api(`/tracker/${id}`, { method: "PATCH", body: { status: col } }).catch(
+        (err) => {
+          setStatus(previous);
+          setError(err.message);
+        },
       );
     }
     onDragEnd();
@@ -64,6 +96,17 @@ export function Tracker() {
         <h1 className="dd-title">Tracker</h1>
       </header>
 
+      <form className="dd-add" onSubmit={addCard}>
+        <input
+          type="text"
+          placeholder="Add an application, e.g. Backend Intern – Zoho"
+          value={newTitle}
+          onChange={(e) => setNewTitle(e.target.value)}
+        />
+        <button type="submit">Add</button>
+      </form>
+      {error && <p className="dd-error">{error}</p>}
+
       <div className="dd-board">
         {COLUMNS.map((col) => (
           <section
@@ -86,7 +129,15 @@ export function Tracker() {
                   onDragStart={(e) => onDragStart(e, card)}
                   onDragEnd={onDragEnd}
                 >
-                  {card.title}
+                  <span>{card.title}</span>
+                  <button
+                    type="button"
+                    className="dd-remove"
+                    aria-label={`Remove ${card.title}`}
+                    onClick={() => removeCard(card.id)}
+                  >
+                    ×
+                  </button>
                 </div>
               ))}
           </section>

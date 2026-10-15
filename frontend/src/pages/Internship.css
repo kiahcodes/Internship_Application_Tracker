@@ -236,3 +236,16 @@
   font-size: 0.78rem;
   font-weight: 600;
 }
+
+.source-link {
+  display: inline-block;
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+  text-transform: capitalize;
+  color: inherit;
+  opacity: 0.75;
+}
+
+.source-link:hover {
+  opacity: 1;
+}

@@ -1,30 +1,39 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   MAX_RESUME_FILE_SIZE,
-  MAX_RESUME_VERSIONS,
+  deleteResume,
+  downloadResume,
   formatFileSize,
   formatUploadDate,
   loadResumeVersions,
-  saveResumeVersions,
+  setCurrentResume,
+  uploadResume,
 } from "../utils/resume";
 import "./ResumeManager.css";
 
 export function ResumeManager() {
-  const [versions, setVersions] = useState(loadResumeVersions);
+  const [versions, setVersions] = useState([]);
   const [error, setError] = useState("");
   const fileInputRef = useRef(null);
 
-  const persist = (next) => {
+  const refresh = () => loadResumeVersions().then(setVersions);
+
+  // Run an API action, then reload the list from the server.
+  const run = async (action) => {
     try {
-      saveResumeVersions(next);
-      setVersions(next);
+      await action();
+      await refresh();
       setError("");
-    } catch {
-      setError(
-        "Couldn't save — storage limit reached. Remove an older version and try again.",
-      );
+    } catch (err) {
+      setError(err.message);
     }
   };
+
+  useEffect(() => {
+    loadResumeVersions()
+      .then(setVersions)
+      .catch((err) => setError(err.message));
+  }, []);
 
   const handleUpload = (e) => {
     const file = e.target.files?.[0];
@@ -35,36 +44,12 @@ export function ResumeManager() {
       setError("That file is too large. Please upload something under 4MB.");
       return;
     }
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      const newVersion = {
-        id: Date.now(),
-        fileName: file.name,
-        fileSize: file.size,
-        uploadedAt: new Date().toISOString(),
-        dataUrl: reader.result,
-        current: true,
-      };
-      const rest = versions.map((v) => ({ ...v, current: false }));
-      persist([newVersion, ...rest].slice(0, MAX_RESUME_VERSIONS));
-    };
-    reader.onerror = () => setError("Couldn't read that file. Please try again.");
-    reader.readAsDataURL(file);
+    run(() => uploadResume(file));
   };
 
-  const setCurrent = (id) => {
-    persist(versions.map((v) => ({ ...v, current: v.id === id })));
-  };
-
-  const removeVersion = (id) => {
-    const removingCurrent = versions.find((v) => v.id === id)?.current;
-    let next = versions.filter((v) => v.id !== id);
-    if (removingCurrent && next.length > 0) {
-      next = next.map((v, i) => ({ ...v, current: i === 0 }));
-    }
-    persist(next);
-  };
+  const setCurrent = (id) => run(() => setCurrentResume(id));
+  const removeVersion = (id) => run(() => deleteResume(id));
+  const download = (v) => downloadResume(v).catch((err) => setError(err.message));
 
   const current = versions.find((v) => v.current);
   const history = versions.filter((v) => !v.current);
@@ -113,13 +98,13 @@ export function ResumeManager() {
               {formatUploadDate(current.uploadedAt)}
             </p>
           </div>
-          <a
+          <button
+            type="button"
             className="resume-download-link"
-            href={current.dataUrl}
-            download={current.fileName}
+            onClick={() => download(current)}
           >
             Download
-          </a>
+          </button>
         </div>
       ) : (
         <p className="resume-empty">
@@ -143,9 +128,9 @@ export function ResumeManager() {
                   <button type="button" onClick={() => setCurrent(v.id)}>
                     Make current
                   </button>
-                  <a href={v.dataUrl} download={v.fileName}>
+                  <button type="button" onClick={() => download(v)}>
                     Download
-                  </a>
+                  </button>
                   <button
                     type="button"
                     className="resume-remove"

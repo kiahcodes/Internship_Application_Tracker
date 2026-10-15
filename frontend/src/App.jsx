@@ -1,4 +1,5 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
+import { ProtectedRoute } from "./components/ProtectedRoute.jsx";
 import { Navbar } from "./components/Navbar.jsx";
 import { Home } from "./pages/Home.jsx";
 import { Internship } from "./pages/Internship.jsx";
@@ -14,13 +15,15 @@ function App() {
     <main className="main">
       <Navbar />
       <Routes>
-        <Route path="/" element={<LoginPage />} />
+        <Route path="/" element={<Home />} />
+        <Route path="/home" element={<Navigate to="/" replace />} />
+        <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
-        <Route path="/home" element={<Home />} />
-        <Route path="/internships" element={<Internship />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/vue-directives" element={<VueDirectives />} />
-        <Route path="/drag-drop" element={<Tracker />} />
+        <Route path="/internships" element={<ProtectedRoute><Internship /></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+        {/* <Route path="/vue-directives" element={<VueDirectives />} /> */}
+        <Route path="/drag-drop" element={<ProtectedRoute><Tracker /></ProtectedRoute>} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </main>
   );

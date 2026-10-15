@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import heroImage from "../assets/lp.jpg";
-import { login } from "../utils/auth";
+import { signup } from "../utils/auth";
 
 const inputClass =
   "w-full p-3 rounded-lg bg-[#e5f3e7] border-2 border-[#0e6818] placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#0e6818]/40 " +
@@ -12,11 +12,32 @@ export const SignupPage = () => {
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [role, setRole] = useState("student");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  const handleSignUp = (e) => {
+  const handleSignUp = async (e) => {
     e.preventDefault();
-    login({ name: name || "Student", email });
-    navigate("/home");
+    setError("");
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters");
+      return;
+    }
+    if (password !== confirm) {
+      setError("Passwords don't match");
+      return;
+    }
+    setBusy(true);
+    try {
+      await signup({ name, email, password, role });
+      navigate("/");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -77,6 +98,9 @@ export const SignupPage = () => {
                   type="password"
                   placeholder="Enter your password"
                   className={inputClass}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
                 />
               </div>
 
@@ -88,11 +112,31 @@ export const SignupPage = () => {
                   type="password"
                   placeholder="Confirm your password"
                   className={inputClass}
+                  value={confirm}
+                  onChange={(e) => setConfirm(e.target.value)}
+                  required
                 />
               </div>
 
+              <div>
+                <label className="block mb-1 font-medium text-[#2a1c0f]">
+                  I am a
+                </label>
+                <select
+                  className={inputClass}
+                  value={role}
+                  onChange={(e) => setRole(e.target.value)}
+                >
+                  <option value="student">Student (looking for internships)</option>
+                  <option value="poster">Job poster (posting internships)</option>
+                </select>
+              </div>
+
+              {error && <p className="text-red-600 text-sm">{error}</p>}
+
               <button
                 type="submit"
+                disabled={busy}
                 className="w-full py-3 rounded-lg bg-[#0e6818] text-white font-semibold hover:bg-[#0a4f12] transition-colors"
               >
                 Sign Up
@@ -102,7 +146,7 @@ export const SignupPage = () => {
             <p className="text-center mt-3 text-[#2a1c0f]">
               Already have an account?{" "}
               <Link
-                to="/"
+                to="/login"
                 className="text-green-700 font-semibold hover:underline"
               >
                 Sign In

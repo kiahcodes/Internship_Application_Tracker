@@ -98,6 +98,10 @@
 }
 
 .resume-download-link {
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
   flex-shrink: 0;
   font-size: 0.85rem;
   font-weight: 600;

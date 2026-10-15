@@ -20,12 +20,12 @@ export function Navbar() {
     logout();
     setLoggedIn(false);
     closeMenu();
-    navigate("/");
+    navigate("/login");
   };
 
   return (
     <nav className="custom-navbar">
-      <NavLink to="/home" className="logo" onClick={closeMenu}>
+      <NavLink to="/" className="logo" onClick={closeMenu}>
         <img src={logo} alt="logo" className="logo-img" />
         Campus2Career
       </NavLink>
@@ -43,30 +43,36 @@ export function Navbar() {
 
       <ul className={`nav-links ${isOpen ? "open" : ""}`}>
         <li>
-          <NavLink to="/home" onClick={closeMenu}>
+          <NavLink to="/" end onClick={closeMenu}>
             Home
           </NavLink>
         </li>
-        <li>
-          <NavLink to="/internships" onClick={closeMenu}>
-            Opportunities
-          </NavLink>
-        </li>
-        <li>
-          <NavLink to="/drag-drop" onClick={closeMenu}>
-            Tracker
-          </NavLink>
-        </li>
-        <li>
+        {loggedIn && (
+          <>
+            <li>
+              <NavLink to="/internships" onClick={closeMenu}>
+                Opportunities
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to="/drag-drop" onClick={closeMenu}>
+                Tracker
+              </NavLink>
+            </li>
+          </>
+        )}
+        {/* <li>
           <NavLink to="/vue-directives" onClick={closeMenu}>
             Vue Lab
           </NavLink>
-        </li>
-        <li>
-          <NavLink to="/profile" onClick={closeMenu}>
-            Profile
-          </NavLink>
-        </li>
+        </li> */}
+        {loggedIn && (
+          <li>
+            <NavLink to="/profile" onClick={closeMenu}>
+              Profile
+            </NavLink>
+          </li>
+        )}
 
         <li>
           {loggedIn ? (
@@ -79,7 +85,7 @@ export function Navbar() {
             </button>
           ) : (
             <NavLink
-              to="/"
+              to="/login"
               className="nav-auth-btn nav-auth-link"
               onClick={closeMenu}
             >

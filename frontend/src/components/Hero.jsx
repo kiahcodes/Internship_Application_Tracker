@@ -1,10 +1,19 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { loadSession } from "../utils/auth";
 import { loadStudent } from "../utils/student";
 import "./Hero.css";
 
 export const Hero = () => {
-  const { name } = loadStudent();
+  // Show the name from the session right away, then refresh from the profile.
+  const [name, setName] = useState(() => loadSession()?.name || "Student");
   const firstName = name.split(" ")[0];
+
+  useEffect(() => {
+    loadStudent()
+      .then((student) => setName(student.name))
+      .catch(() => {});
+  }, []);
 
   return (
     <section className="hero-box">

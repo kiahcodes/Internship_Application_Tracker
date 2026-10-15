@@ -1,17 +1,29 @@
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./LoginPage.css";
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import heroImage from "../assets/lp.jpg";
 import { login } from "../utils/auth";
 export const LoginPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  const handleSignIn = (e) => {
+  const handleSignIn = async (e) => {
     e.preventDefault();
-    login({ name: email.split("@")[0] || "Student", email });
-    navigate("/home");
+    setError("");
+    setBusy(true);
+    try {
+      await login({ email, password });
+      navigate(location.state?.from || "/", { replace: true });
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
   };
   return (
     <div className="bg">
@@ -53,10 +65,19 @@ export const LoginPage = () => {
                       type="password"
                       className="form-control"
                       placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
                     />
                   </div>
 
-                  <button type="submit" className="btn btn-primary w-100">
+                  {error && <p className="text-danger">{error}</p>}
+
+                  <button
+                    type="submit"
+                    className="btn btn-primary w-100"
+                    disabled={busy}
+                  >
                     Sign In
                   </button>
                 </form>

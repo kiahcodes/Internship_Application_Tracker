@@ -1,18 +1,29 @@
-export const RESUME_STORAGE_KEY = "profile.resumeVersions";
-export const MAX_RESUME_VERSIONS = 5;
-export const MAX_RESUME_FILE_SIZE = 40 * 1024 * 1024; // 4MB
+import { api } from "./api";
 
-export function loadResumeVersions() {
-  try {
-    const saved = localStorage.getItem(RESUME_STORAGE_KEY);
-    return saved ? JSON.parse(saved) : [];
-  } catch {
-    return [];
-  }
+export const MAX_RESUME_FILE_SIZE = 4 * 1024 * 1024; // 4MB
+
+export const loadResumeVersions = () => api("/resumes");
+
+export function uploadResume(file) {
+  const body = new FormData();
+  body.append("file", file);
+  return api("/resumes", { method: "POST", body });
 }
 
-export function saveResumeVersions(versions) {
-  localStorage.setItem(RESUME_STORAGE_KEY, JSON.stringify(versions));
+export const setCurrentResume = (id) =>
+  api(`/resumes/${id}/current`, { method: "PATCH" });
+
+export const deleteResume = (id) => api(`/resumes/${id}`, { method: "DELETE" });
+
+// Downloads need the auth header, so fetch the file and save it via a blob URL.
+export async function downloadResume(version) {
+  const res = await api(`/resumes/${version.id}/download`, { raw: true });
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = version.fileName;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 export function formatFileSize(bytes) {

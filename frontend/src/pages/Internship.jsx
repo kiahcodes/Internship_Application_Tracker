@@ -1,53 +1,7 @@
 import { useEffect, useState } from "react";
+import { api } from "../utils/api";
+import { hasPermission } from "../utils/auth";
 import "./Internship.css";
-
-const dummyData = [
-  {
-    id: 1,
-    company: "Google",
-    role: "Frontend Intern",
-    location: "Bengaluru",
-    lat: 12.9716,
-    lon: 77.5946,
-    applied: false,
-  },
-  {
-    id: 2,
-    company: "Microsoft",
-    role: "Software Engineering Intern",
-    location: "Hyderabad",
-    lat: 17.385,
-    lon: 78.4867,
-    applied: false,
-  },
-  {
-    id: 3,
-    company: "Amazon",
-    role: "SDE Intern",
-    location: "Bangalore",
-    lat: 12.9716,
-    lon: 77.5946,
-    applied: false,
-  },
-  {
-    id: 4,
-    company: "Adobe",
-    role: "React Developer Intern",
-    location: "Noida",
-    lat: 28.5355,
-    lon: 77.391,
-    applied: false,
-  },
-  {
-    id: 5,
-    company: "Infosys",
-    role: "Web Development Intern",
-    location: "Pune",
-    lat: 18.5204,
-    lon: 73.8567,
-    applied: false,
-  },
-];
 
 function distanceKm(lat1, lon1, lat2, lon2) {
   const rad = (d) => (d * Math.PI) / 180;
@@ -58,17 +12,56 @@ function distanceKm(lat1, lon1, lat2, lon2) {
 }
 
 export function Internship() {
-  const [internships, setInternships] = useState(dummyData);
+  const [internships, setInternships] = useState([]);
+  const [loadError, setLoadError] = useState("");
   const [userCity, setUserCity] = useState("");
   const [userCoords, setUserCoords] = useState(null);
   const [locationStatus, setLocationStatus] = useState("loading");
   const [query, setQuery] = useState("");
+  const canManage = hasPermission("internships:manage");
+  const [form, setForm] = useState({ company: "", role: "", location: "", url: "" });
 
-  function toggleApply(id) {
-    const updated = internships.map((item) =>
-      item.id === id ? { ...item, applied: !item.applied } : item,
-    );
-    setInternships(updated);
+  useEffect(() => {
+    api("/internships")
+      .then(setInternships)
+      .catch((err) => setLoadError(err.message));
+  }, []);
+
+  // Applying also adds/removes the matching card on the Tracker board.
+  async function toggleApply(item) {
+    try {
+      await api(`/internships/${item.id}/apply`, {
+        method: item.applied ? "DELETE" : "POST",
+      });
+      setInternships((prev) =>
+        prev.map((i) => (i.id === item.id ? { ...i, applied: !i.applied } : i)),
+      );
+    } catch (err) {
+      setLoadError(err.message);
+    }
+  }
+
+  // Job posters only; the server enforces this too.
+  async function addInternship(e) {
+    e.preventDefault();
+    try {
+      const created = await api("/internships", { method: "POST", body: form });
+      setInternships((prev) => [created, ...prev]);
+      setForm({ company: "", role: "", location: "", url: "" });
+      setLoadError("");
+    } catch (err) {
+      setLoadError(err.message);
+    }
+  }
+
+  async function removeInternship(id) {
+    if (!window.confirm("Delete this internship for everyone?")) return;
+    try {
+      await api(`/internships/${id}`, { method: "DELETE" });
+      setInternships((prev) => prev.filter((i) => i.id !== id));
+    } catch (err) {
+      setLoadError(err.message);
+    }
   }
 
   function detectLocation() {
@@ -111,13 +104,15 @@ export function Internship() {
 
   const withDistance = internships.map((item) => ({
     ...item,
-    distance: userCoords
+    distance: userCoords && item.lat != null
       ? distanceKm(userCoords.lat, userCoords.lon, item.lat, item.lon)
       : null,
   }));
 
   const sortedInternships = userCoords
-    ? [...withDistance].sort((a, b) => a.distance - b.distance)
+    ? [...withDistance].sort(
+        (a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity),
+      )
     : withDistance;
 
   const visibleInternships = sortedInternships.filter((item) => {
@@ -176,6 +171,24 @@ export function Internship() {
         </span>
       </div>
 
+      {canManage && (
+        <form className="internship-toolbar" onSubmit={addInternship}>
+          {["company", "role", "location", "url"].map((f) => (
+            <input
+              key={f}
+              className="search-input"
+              placeholder={f === "url" ? "Link (optional)" : f[0].toUpperCase() + f.slice(1)}
+              value={form[f]}
+              required={f !== "url"}
+              onChange={(e) => setForm({ ...form, [f]: e.target.value })}
+            />
+          ))}
+          <button className="apply-btn" type="submit">Add internship</button>
+        </form>
+      )}
+
+      {loadError && <p className="no-results">{loadError}</p>}
+
       <div className="internship-grid">
         {visibleInternships.map((item) => (
           <article className="internship-card" key={item.id}>
@@ -209,9 +222,20 @@ export function Internship() {
               )}
             </p>
 
+            {item.url && (
+              <a
+                className="source-link"
+                href={item.url}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                View on {item.source} ↗
+              </a>
+            )}
+
             <button
               className={`apply-btn ${item.applied ? "apply-btn-applied" : ""}`}
-              onClick={() => toggleApply(item.id)}
+              onClick={() => toggleApply(item)}
             >
               {item.applied && (
                 <svg
@@ -227,6 +251,15 @@ export function Internship() {
               )}
               {item.applied ? "Applied" : "Apply"}
             </button>
+            {item.mine && (
+              <button
+                className="apply-btn"
+                style={{ marginTop: 8, background: "#a33" }}
+                onClick={() => removeInternship(item.id)}
+              >
+                Delete
+              </button>
+            )}
           </article>
         ))}
 

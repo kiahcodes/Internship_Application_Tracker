@@ -1,23 +1,39 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./Profile.css";
-import { STUDENT_STORAGE_KEY, loadStudent } from "../utils/student";
+import { loadStudent, saveStudent } from "../utils/student";
 import { ResumeManager } from "../components/ResumeManager.jsx";
 
 export function Profile() {
-  const [student, setStudent] = useState(loadStudent);
-  const [draft, setDraft] = useState(student);
+  const [student, setStudent] = useState(null);
+  const [draft, setDraft] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    loadStudent()
+      .then((data) => {
+        setStudent(data);
+        setDraft(data);
+      })
+      .catch((err) => setError(err.message));
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setDraft((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setStudent(draft);
-    localStorage.setItem(STUDENT_STORAGE_KEY, JSON.stringify(draft));
-    setIsEditing(false);
+    try {
+      const saved = await saveStudent(draft);
+      setStudent(saved);
+      setDraft(saved);
+      setError("");
+      setIsEditing(false);
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   const handleCancel = () => {
@@ -25,7 +41,15 @@ export function Profile() {
     setIsEditing(false);
   };
 
-  const skillList = student.skills
+  if (!student) {
+    return (
+      <section className="profile-page">
+        <p>{error || "Loading profile…"}</p>
+      </section>
+    );
+  }
+
+  const skillList = (student.skills || "")
     .split(",")
     .map((skill) => skill.trim())
     .filter(Boolean);
@@ -35,6 +59,8 @@ export function Profile() {
       <div className="profile-layout">
       <div className="profile-card">
         <div className="profile-avatar">{student.name.charAt(0)}</div>
+
+        {error && <p className="resume-error">{error}</p>}
 
         {isEditing ? (
           <form className="profile-form" onSubmit={handleSubmit}>
