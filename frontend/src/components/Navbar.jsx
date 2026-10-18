@@ -1,27 +1,15 @@
-import { useEffect, useState } from "react";
-import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { NavLink, useLocation } from "react-router-dom";
 import logo from "../assets/logo.png";
-import { isAuthenticated, logout } from "../utils/auth";
+import { isAuthenticated } from "../utils/auth";
 import "./Navbar.css";
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
-  const [loggedIn, setLoggedIn] = useState(isAuthenticated);
-  const location = useLocation();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    setLoggedIn(isAuthenticated());
-  }, [location.pathname]);
+  useLocation(); // re-render on navigation so the login state below stays current
+  const loggedIn = isAuthenticated();
 
   const closeMenu = () => setIsOpen(false);
-
-  const handleLogout = () => {
-    logout();
-    setLoggedIn(false);
-    closeMenu();
-    navigate("/login");
-  };
 
   return (
     <nav className="custom-navbar">
@@ -59,13 +47,13 @@ export function Navbar() {
                 Tracker
               </NavLink>
             </li>
+            <li>
+              <NavLink to="/documents" onClick={closeMenu}>
+                Documents
+              </NavLink>
+            </li>
           </>
         )}
-        {/* <li>
-          <NavLink to="/vue-directives" onClick={closeMenu}>
-            Vue Lab
-          </NavLink>
-        </li> */}
         {loggedIn && (
           <li>
             <NavLink to="/profile" onClick={closeMenu}>
@@ -74,16 +62,8 @@ export function Navbar() {
           </li>
         )}
 
-        <li>
-          {loggedIn ? (
-            <button
-              type="button"
-              className="nav-auth-btn"
-              onClick={handleLogout}
-            >
-              Logout
-            </button>
-          ) : (
+        {!loggedIn && (
+          <li>
             <NavLink
               to="/login"
               className="nav-auth-btn nav-auth-link"
@@ -91,8 +71,8 @@ export function Navbar() {
             >
               Login
             </NavLink>
-          )}
-        </li>
+          </li>
+        )}
       </ul>
     </nav>
   );

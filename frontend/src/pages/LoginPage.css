@@ -8,9 +8,12 @@
   text-decoration: none;
   cursor: pointer;
   transition:
-    transform 0.25s ease,
-    box-shadow 0.25s ease,
-    background 0.25s ease;
+    transform 0.16s cubic-bezier(0.23, 1, 0.32, 1),
+    box-shadow 0.2s cubic-bezier(0.23, 1, 0.32, 1),
+    background 0.2s cubic-bezier(0.23, 1, 0.32, 1);
+}
+.btn:active:not(:disabled) {
+  transform: scale(0.97);
 }
 .btn-primary {
   background: #0e6818;
@@ -41,6 +44,7 @@
 }
 .bg {
   min-height: 100vh;
+  min-height: 100dvh;
   padding: 7rem 2rem 4rem;
   background: #f7f0e6;
   display: flex;

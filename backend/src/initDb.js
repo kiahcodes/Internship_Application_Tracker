@@ -51,6 +51,37 @@ for (const [name, def] of Object.entries(wanted)) {
     console.log(`Added internships.${name}`);
   }
 }
+// Applications remember which resume version was sent with them.
+const [appCols] = await conn.query(`SHOW COLUMNS FROM ${db}.applications LIKE 'resume_id'`);
+if (!appCols.length) {
+  await conn.query(`ALTER TABLE ${db}.applications ADD COLUMN resume_id INT NULL`);
+  await conn.query(
+    `ALTER TABLE ${db}.applications ADD CONSTRAINT fk_applications_resume
+     FOREIGN KEY (resume_id) REFERENCES resumes(id) ON DELETE SET NULL`,
+  );
+  console.log("Added applications.resume_id");
+}
+// Applications can carry a cover letter.
+const [coverCols] = await conn.query(`SHOW COLUMNS FROM ${db}.applications LIKE 'cover_letter'`);
+if (!coverCols.length) {
+  await conn.query(`ALTER TABLE ${db}.applications ADD COLUMN cover_letter MEDIUMTEXT NULL`);
+  console.log("Added applications.cover_letter");
+}
+// Resumes and cover letters share one table; applications can point at an uploaded letter.
+const [kindCols] = await conn.query(`SHOW COLUMNS FROM ${db}.resumes LIKE 'kind'`);
+if (!kindCols.length) {
+  await conn.query(`ALTER TABLE ${db}.resumes ADD COLUMN kind ENUM('resume','cover_letter') NOT NULL DEFAULT 'resume'`);
+  console.log("Added resumes.kind");
+}
+const [letterIdCols] = await conn.query(`SHOW COLUMNS FROM ${db}.applications LIKE 'cover_letter_id'`);
+if (!letterIdCols.length) {
+  await conn.query(`ALTER TABLE ${db}.applications ADD COLUMN cover_letter_id INT NULL`);
+  await conn.query(
+    `ALTER TABLE ${db}.applications ADD CONSTRAINT fk_applications_cover_letter
+     FOREIGN KEY (cover_letter_id) REFERENCES resumes(id) ON DELETE SET NULL`,
+  );
+  console.log("Added applications.cover_letter_id");
+}
 // Posted internships have no coordinates, so lat/lon must allow NULL.
 await conn.query(`ALTER TABLE ${db}.internships MODIFY lat DOUBLE NULL, MODIFY lon DOUBLE NULL`);
 console.log("Database ready.");

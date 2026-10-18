@@ -1,0 +1,228 @@
+.docs-page .docs-section,
+.docs-page .docs-files {
+  max-width: 960px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.docs-page .page-head,
+.docs-page .alert-ui {
+  max-width: 960px;
+}
+
+.docs-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.docs-h {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 500;
+}
+.docs-filter {
+  display: flex;
+  gap: 0.4rem;
+}
+.docs-chip {
+  min-height: 36px;
+  padding: 0 0.9rem;
+  border: 1.5px solid var(--c2c-line-strong);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--c2c-ink-soft);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.16s var(--ease), color 0.16s var(--ease), border-color 0.16s var(--ease);
+}
+.docs-chip:hover {
+  border-color: var(--c2c-ink-soft);
+}
+.docs-chip--on {
+  background: var(--c2c-ink);
+  border-color: var(--c2c-ink);
+  color: var(--c2c-cream);
+}
+.docs-skel,
+.apps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.docs-none {
+  color: var(--c2c-ink-soft);
+}
+
+.app {
+  --accent: var(--stage-applied);
+  background: var(--c2c-surface);
+  border: 1px solid var(--c2c-line);
+  border-left: 4px solid var(--accent);
+  border-radius: 10px;
+  box-shadow: var(--shadow-sm);
+}
+.app-interview {
+  --accent: var(--stage-interview);
+}
+.app-offer {
+  --accent: var(--stage-offer);
+}
+.app-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) auto minmax(0, 1.3fr) auto;
+  align-items: center;
+  gap: 0.75rem 1.25rem;
+  width: 100%;
+  padding: 0.9rem 1rem;
+  border: none;
+  border-radius: 10px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.app-title {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.app-stage {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+.app-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.app-have {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  font-size: 0.82rem;
+}
+.have {
+  color: var(--c2c-green-deep);
+  font-weight: 600;
+}
+.have-no {
+  color: var(--c2c-ink-soft);
+}
+.app-chevron {
+  color: var(--c2c-ink-soft);
+  transition: transform 0.2s var(--ease);
+}
+.app-head[aria-expanded="true"] .app-chevron {
+  transform: rotate(180deg);
+}
+
+.app-panel {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem 1.5rem;
+  padding: 0.25rem 1rem 1.25rem;
+  border-top: 1px solid var(--c2c-line);
+  padding-top: 1rem;
+}
+.doc {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.doc-wide {
+  grid-column: 1 / -1;
+}
+.doc-label {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--c2c-ink-soft);
+}
+.doc-name {
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.doc-none {
+  margin: 0;
+  color: var(--c2c-ink-soft);
+}
+.doc-text {
+  margin: 0;
+  padding: 0.85rem 1rem;
+  max-height: 220px;
+  overflow: auto;
+  background: var(--c2c-cream);
+  border-radius: 8px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.doc-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.doc-pick {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--c2c-ink-soft);
+}
+.doc-pick .dd-move {
+  width: 100%;
+  min-width: 0;
+  text-overflow: ellipsis;
+}
+
+.docs-files {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+  margin-top: 3rem;
+}
+
+@media (max-width: 760px) {
+  .app-head {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .app-title {
+    grid-column: 1 / -1;
+  }
+  .app-have {
+    grid-column: 1;
+  }
+  .app-chevron {
+    grid-column: 2;
+    grid-row: 2;
+  }
+  .app-stage {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .app-have {
+    grid-row: 3;
+    grid-column: 1 / -1;
+  }
+  .app-panel {
+    grid-template-columns: 1fr;
+  }
+}

@@ -9,6 +9,7 @@ import { ROLES, PERMISSIONS, requireAuth, requirePermission, signToken } from ".
 
 const MAX_RESUME_BYTES = 4 * 1024 * 1024;
 const MAX_RESUME_VERSIONS = 5;
+const MAX_COVER_LETTER_FILES = 25; // letters are usually one per application
 const STATUSES = ["Applied", "Interview", "Offer"];
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -71,6 +72,30 @@ app.get("/api/auth/me", requireAuth, h(async (req, res) => {
   res.json(publicUser(rows[0]));
 }));
 
+// Permanently deletes the signed-in account. The password is required so a stolen
+// session token alone can't wipe an account. Profile, resumes and tracked applications
+// go with it (ON DELETE CASCADE); internships the user posted are removed too.
+app.delete("/api/account", requireAuth, h(async (req, res) => {
+  const password = String(req.body?.password || "");
+  const [rows] = await pool.query("SELECT password_hash FROM users WHERE id = ?", [req.userId]);
+  if (!rows[0] || !(await bcrypt.compare(password, rows[0].password_hash)))
+    return res.status(403).json({ error: "That password isn't right" });
+
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    await conn.query("DELETE FROM internships WHERE posted_by = ?", [req.userId]);
+    await conn.query("DELETE FROM users WHERE id = ?", [req.userId]);
+    await conn.commit();
+  } catch (err) {
+    await conn.rollback().catch(() => {});
+    throw err;
+  } finally {
+    conn.release();
+  }
+  res.status(204).end();
+}));
+
 // ---------- Profile ----------
 const profileQuery = `
   SELECT u.name, u.email, p.course, p.semester, p.bio, p.skills
@@ -128,8 +153,9 @@ app.post("/api/internships/:id/apply", requireAuth, h(async (req, res) => {
   ]);
   if (!rows[0]) return res.status(404).json({ error: "Internship not found" });
   await pool.query(
-    "INSERT IGNORE INTO applications (user_id, internship_id, title, status) VALUES (?, ?, ?, 'Applied')",
-    [req.userId, req.params.id, `${rows[0].role} – ${rows[0].company}`],
+    `INSERT IGNORE INTO applications (user_id, internship_id, title, status, resume_id)
+     VALUES (?, ?, ?, 'Applied', (SELECT id FROM resumes WHERE user_id = ? AND is_current = 1 AND kind = 'resume' LIMIT 1))`,
+    [req.userId, req.params.id, `${rows[0].role} – ${rows[0].company}`, req.userId],
   );
   res.status(201).json({ applied: true });
 }));
@@ -181,12 +207,36 @@ app.delete("/api/internships/:id", requireAuth, requirePermission("internships:m
 }));
 
 // ---------- Tracker cards ----------
+const CARD_SELECT = `
+  SELECT a.id, a.internship_id, a.title, a.status, a.resume_id, a.cover_letter, a.cover_letter_id,
+         r.file_name AS resume_name, cl.file_name AS cover_letter_name,
+         i.company, i.role, i.description
+  FROM applications a
+  LEFT JOIN resumes r ON r.id = a.resume_id
+  LEFT JOIN resumes cl ON cl.id = a.cover_letter_id
+  LEFT JOIN internships i ON i.id = a.internship_id`;
+const toCard = (r) => ({
+  id: r.id,
+  internship_id: r.internship_id,
+  title: r.title,
+  status: r.status,
+  resumeId: r.resume_id,
+  resumeName: r.resume_name ?? null,
+  coverLetter: r.cover_letter ?? "",
+  coverLetterId: r.cover_letter_id,
+  coverLetterName: r.cover_letter_name ?? null,
+  // Posting details, when the card came from a listing (null for hand-added cards).
+  company: r.company ?? null,
+  role: r.role ?? null,
+  description: r.description ?? null,
+});
+const MAX_COVER_LETTER = 8000;
+
 app.get("/api/tracker", requireAuth, h(async (req, res) => {
-  const [rows] = await pool.query(
-    "SELECT id, internship_id, title, status FROM applications WHERE user_id = ? ORDER BY id",
-    [req.userId],
-  );
-  res.json(rows);
+  const [rows] = await pool.query(`${CARD_SELECT} WHERE a.user_id = ? ORDER BY a.id`, [
+    req.userId,
+  ]);
+  res.json(rows.map(toCard));
 }));
 
 app.post("/api/tracker", requireAuth, h(async (req, res) => {
@@ -195,21 +245,61 @@ app.post("/api/tracker", requireAuth, h(async (req, res) => {
   if (!title) return res.status(400).json({ error: "Title is required" });
   if (!STATUSES.includes(status)) return res.status(400).json({ error: "Invalid status" });
   const [result] = await pool.query(
-    "INSERT INTO applications (user_id, title, status) VALUES (?, ?, ?)",
-    [req.userId, title.slice(0, 255), status],
+    `INSERT INTO applications (user_id, title, status, resume_id)
+     VALUES (?, ?, ?, (SELECT id FROM resumes WHERE user_id = ? AND is_current = 1 AND kind = 'resume' LIMIT 1))`,
+    [req.userId, title.slice(0, 255), status, req.userId],
   );
-  res.status(201).json({ id: result.insertId, internship_id: null, title, status });
+  const [rows] = await pool.query(`${CARD_SELECT} WHERE a.id = ?`, [result.insertId]);
+  res.status(201).json(toCard(rows[0]));
 }));
 
+// Update a card's status and/or the resume version sent with it.
 app.patch("/api/tracker/:id", requireAuth, h(async (req, res) => {
-  if (!STATUSES.includes(req.body.status))
-    return res.status(400).json({ error: "Invalid status" });
+  const { status, resumeId, coverLetter, coverLetterId } = req.body;
+  const sets = [];
+  const params = [];
+  if (status !== undefined) {
+    if (!STATUSES.includes(status)) return res.status(400).json({ error: "Invalid status" });
+    sets.push("status = ?");
+    params.push(status);
+  }
+  if (resumeId !== undefined) {
+    if (resumeId !== null) {
+      const [owned] = await pool.query(
+        "SELECT id FROM resumes WHERE id = ? AND user_id = ? AND kind = 'resume'",
+        [resumeId, req.userId],
+      );
+      if (!owned.length) return res.status(404).json({ error: "Resume not found" });
+    }
+    sets.push("resume_id = ?");
+    params.push(resumeId);
+  }
+  if (coverLetterId !== undefined) {
+    if (coverLetterId !== null) {
+      const [owned] = await pool.query(
+        "SELECT id FROM resumes WHERE id = ? AND user_id = ? AND kind = 'cover_letter'",
+        [coverLetterId, req.userId],
+      );
+      if (!owned.length) return res.status(404).json({ error: "Cover letter file not found" });
+    }
+    sets.push("cover_letter_id = ?");
+    params.push(coverLetterId);
+  }
+  if (coverLetter !== undefined) {
+    const text = coverLetter === null ? "" : String(coverLetter);
+    if (text.length > MAX_COVER_LETTER)
+      return res.status(400).json({ error: `Cover letter is too long (max ${MAX_COVER_LETTER} characters)` });
+    sets.push("cover_letter = ?");
+    params.push(text.trim() ? text : null);
+  }
+  if (!sets.length) return res.status(400).json({ error: "Nothing to update" });
+
   const [result] = await pool.query(
-    "UPDATE applications SET status = ? WHERE id = ? AND user_id = ?",
-    [req.body.status, req.params.id, req.userId],
+    `UPDATE applications SET ${sets.join(", ")} WHERE id = ? AND user_id = ?`,
+    [...params, req.params.id, req.userId],
   );
   if (!result.affectedRows) return res.status(404).json({ error: "Card not found" });
-  res.json({ id: Number(req.params.id), status: req.body.status });
+  res.json({ id: Number(req.params.id), status, resumeId, coverLetter, coverLetterId });
 }));
 
 app.delete("/api/tracker/:id", requireAuth, h(async (req, res) => {
@@ -219,95 +309,106 @@ app.delete("/api/tracker/:id", requireAuth, h(async (req, res) => {
   res.status(204).end();
 }));
 
-// ---------- Resumes ----------
-const resumeCols = "id, file_name, file_size, is_current, uploaded_at";
-const toResume = (r) => ({
+// ---------- Resumes & cover letters ----------
+// Both are uploaded files kept as versions in the `resumes` table, told apart by `kind`.
+const fileCols = "id, file_name, file_size, is_current, uploaded_at";
+const toFile = (r) => ({
   id: r.id,
   fileName: r.file_name,
   fileSize: r.file_size,
   uploadedAt: r.uploaded_at,
   current: Boolean(r.is_current),
 });
+const isPdf = (r) => r.mime_type === "application/pdf" && /\.pdf$/i.test(r.file_name);
 
-app.get("/api/resumes", requireAuth, h(async (req, res) => {
-  const [rows] = await pool.query(
-    `SELECT ${resumeCols} FROM resumes WHERE user_id = ? ORDER BY uploaded_at DESC, id DESC`,
-    [req.userId],
-  );
-  res.json(rows.map(toResume));
-}));
-
-app.post("/api/resumes", requireAuth, upload.single("file"), h(async (req, res) => {
-  const file = req.file;
-  if (!file) return res.status(400).json({ error: "No file uploaded" });
-
-  const conn = await pool.getConnection();
-  try {
-    await conn.beginTransaction();
-    await conn.query("UPDATE resumes SET is_current = 0 WHERE user_id = ?", [req.userId]);
-    const [result] = await conn.query(
-      `INSERT INTO resumes (user_id, file_name, mime_type, file_size, data, is_current)
-       VALUES (?, ?, ?, ?, ?, 1)`,
-      [req.userId, file.originalname, file.mimetype, file.size, file.buffer],
+function mountFiles(base, kind, label, maxVersions) {
+  app.get(base, requireAuth, h(async (req, res) => {
+    const [rows] = await pool.query(
+      `SELECT ${fileCols} FROM resumes WHERE user_id = ? AND kind = ? ORDER BY uploaded_at DESC, id DESC`,
+      [req.userId, kind],
     );
-    // Keep only the newest versions.
-    await conn.query(
-      `DELETE FROM resumes WHERE user_id = ? AND id NOT IN (
-         SELECT id FROM (SELECT id FROM resumes WHERE user_id = ?
-                         ORDER BY uploaded_at DESC, id DESC LIMIT ?) keep)`,
-      [req.userId, req.userId, MAX_RESUME_VERSIONS],
+    res.json(rows.map(toFile));
+  }));
+
+  app.post(base, requireAuth, upload.single("file"), h(async (req, res) => {
+    const file = req.file;
+    if (!file) return res.status(400).json({ error: "No file uploaded" });
+
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      await conn.query("UPDATE resumes SET is_current = 0 WHERE user_id = ? AND kind = ?", [req.userId, kind]);
+      const [result] = await conn.query(
+        `INSERT INTO resumes (user_id, file_name, mime_type, file_size, data, is_current, kind)
+         VALUES (?, ?, ?, ?, ?, 1, ?)`,
+        [req.userId, file.originalname, file.mimetype, file.size, file.buffer, kind],
+      );
+      // Keep only the newest versions of this kind.
+      await conn.query(
+        `DELETE FROM resumes WHERE user_id = ? AND kind = ? AND id NOT IN (
+           SELECT id FROM (SELECT id FROM resumes WHERE user_id = ? AND kind = ?
+                           ORDER BY uploaded_at DESC, id DESC LIMIT ?) keep)`,
+        [req.userId, kind, req.userId, kind, maxVersions],
+      );
+      await conn.commit();
+      const [rows] = await pool.query(`SELECT ${fileCols} FROM resumes WHERE id = ?`, [result.insertId]);
+      res.status(201).json(toFile(rows[0]));
+    } catch (err) {
+      // The connection may already be dead; don't let that hide the real error.
+      await conn.rollback().catch(() => {});
+      throw err;
+    } finally {
+      conn.release();
+    }
+  }));
+
+  app.patch(`${base}/:id/current`, requireAuth, h(async (req, res) => {
+    const [owned] = await pool.query(
+      "SELECT id FROM resumes WHERE id = ? AND user_id = ? AND kind = ?",
+      [req.params.id, req.userId, kind],
     );
-    await conn.commit();
-    const [rows] = await pool.query(`SELECT ${resumeCols} FROM resumes WHERE id = ?`, [
-      result.insertId,
+    if (!owned[0]) return res.status(404).json({ error: `${label} not found` });
+    await pool.query("UPDATE resumes SET is_current = (id = ?) WHERE user_id = ? AND kind = ?", [
+      req.params.id, req.userId, kind,
     ]);
-    res.status(201).json(toResume(rows[0]));
-  } catch (err) {
-    await conn.rollback();
-    throw err;
-  } finally {
-    conn.release();
-  }
-}));
+    res.json({ ok: true });
+  }));
 
-app.patch("/api/resumes/:id/current", requireAuth, h(async (req, res) => {
-  const [owned] = await pool.query("SELECT id FROM resumes WHERE id = ? AND user_id = ?", [
-    req.params.id, req.userId,
-  ]);
-  if (!owned[0]) return res.status(404).json({ error: "Resume not found" });
-  await pool.query("UPDATE resumes SET is_current = (id = ?) WHERE user_id = ?", [
-    req.params.id, req.userId,
-  ]);
-  res.json({ ok: true });
-}));
+  app.delete(`${base}/:id`, requireAuth, h(async (req, res) => {
+    await pool.query("DELETE FROM resumes WHERE id = ? AND user_id = ? AND kind = ?", [
+      req.params.id, req.userId, kind,
+    ]);
+    // If the current one was removed, promote the newest remaining version.
+    await pool.query(
+      `UPDATE resumes SET is_current = 1 WHERE user_id = ? AND kind = ? AND id = (
+         SELECT id FROM (SELECT id FROM resumes WHERE user_id = ? AND kind = ?
+                         ORDER BY uploaded_at DESC, id DESC LIMIT 1) newest)
+       AND NOT EXISTS (SELECT 1 FROM (SELECT id FROM resumes WHERE user_id = ? AND kind = ? AND is_current = 1) cur)`,
+      [req.userId, kind, req.userId, kind, req.userId, kind],
+    );
+    res.status(204).end();
+  }));
 
-app.delete("/api/resumes/:id", requireAuth, h(async (req, res) => {
-  await pool.query("DELETE FROM resumes WHERE id = ? AND user_id = ?", [
-    req.params.id, req.userId,
-  ]);
-  // If the current one was removed, promote the newest remaining version.
-  await pool.query(
-    `UPDATE resumes SET is_current = 1 WHERE user_id = ? AND id = (
-       SELECT id FROM (SELECT id FROM resumes WHERE user_id = ?
-                       ORDER BY uploaded_at DESC, id DESC LIMIT 1) newest)
-     AND NOT EXISTS (SELECT 1 FROM (SELECT id FROM resumes WHERE user_id = ? AND is_current = 1) cur)`,
-    [req.userId, req.userId, req.userId],
-  );
-  res.status(204).end();
-}));
+  // ?inline=1 lets the browser show a PDF in a tab. Anything else is always a download,
+  // so an uploaded HTML file can never run in the page.
+  app.get(`${base}/:id/download`, requireAuth, h(async (req, res) => {
+    const [rows] = await pool.query(
+      "SELECT file_name, mime_type, data FROM resumes WHERE id = ? AND user_id = ? AND kind = ?",
+      [req.params.id, req.userId, kind],
+    );
+    if (!rows[0]) return res.status(404).json({ error: `${label} not found` });
+    const inline = req.query.inline === "1" && isPdf(rows[0]);
+    res.set({
+      "Content-Type": inline ? "application/pdf" : rows[0].mime_type,
+      "Content-Disposition": `${inline ? "inline" : "attachment"}; filename*=UTF-8''${encodeURIComponent(rows[0].file_name)}`,
+      "X-Content-Type-Options": "nosniff",
+    });
+    res.send(rows[0].data);
+  }));
+}
 
-app.get("/api/resumes/:id/download", requireAuth, h(async (req, res) => {
-  const [rows] = await pool.query(
-    "SELECT file_name, mime_type, data FROM resumes WHERE id = ? AND user_id = ?",
-    [req.params.id, req.userId],
-  );
-  if (!rows[0]) return res.status(404).json({ error: "Resume not found" });
-  res.set({
-    "Content-Type": rows[0].mime_type,
-    "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(rows[0].file_name)}`,
-  });
-  res.send(rows[0].data);
-}));
+mountFiles("/api/resumes", "resume", "Resume", MAX_RESUME_VERSIONS);
+mountFiles("/api/cover-letters", "cover_letter", "Cover letter", MAX_COVER_LETTER_FILES);
 
 // ---------- Errors ----------
 app.use((err, req, res, next) => {

@@ -1,22 +1,57 @@
 import { useEffect, useRef, useState } from "react";
 import {
   MAX_RESUME_FILE_SIZE,
-  deleteResume,
-  downloadResume,
+  canPreview,
+  coverLetterApi,
   formatFileSize,
   formatUploadDate,
-  loadResumeVersions,
-  setCurrentResume,
-  uploadResume,
+  resumeApi,
 } from "../utils/resume";
+import { Alert, Button, ConfirmDialog, Skeleton } from "./ui.jsx";
 import "./ResumeManager.css";
 
-export function ResumeManager() {
+// What differs between the two kinds of file.
+const FILE_KINDS = {
+  resume: {
+    api: resumeApi,
+    title: "Resume",
+    noun: "resume",
+    versioned: true, // one is "current"; the rest are earlier versions
+    hint: "PDF or Word, up to 4 MB",
+    empty: "No resume yet. Upload one so it's ready whenever you apply.",
+    uploadFirst: "Upload resume",
+    uploadNext: "Upload new version",
+  },
+  coverLetter: {
+    api: coverLetterApi,
+    title: "Cover letters",
+    noun: "cover letter",
+    versioned: false,
+    hint: "PDF or Word, up to 4 MB. Attach one to each application.",
+    empty: "No cover letters yet. Upload a file, then attach it to an application.",
+    uploadFirst: "Upload cover letter",
+    uploadNext: "Upload cover letter",
+  },
+};
+
+/** Upload, list, view, download and remove one kind of file. */
+export function ResumeManager({ kind = "resume", onChange }) {
+  const cfg = FILE_KINDS[kind];
+  const { api } = cfg;
   const [versions, setVersions] = useState([]);
   const [error, setError] = useState("");
+  const [loaded, setLoaded] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [pendingRemove, setPendingRemove] = useState(null);
+  const [removing, setRemoving] = useState(false);
   const fileInputRef = useRef(null);
+  const titleId = `files-${kind}`;
 
-  const refresh = () => loadResumeVersions().then(setVersions);
+  const apply = (list, initial = false) => {
+    setVersions(list);
+    onChange?.(list, initial);
+  };
+  const refresh = () => api.load().then(apply);
 
   // Run an API action, then reload the list from the server.
   const run = async (action) => {
@@ -30,9 +65,12 @@ export function ResumeManager() {
   };
 
   useEffect(() => {
-    loadResumeVersions()
-      .then(setVersions)
-      .catch((err) => setError(err.message));
+    api
+      .load()
+      .then((list) => apply(list, true))
+      .catch((err) => setError(err.message))
+      .finally(() => setLoaded(true));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleUpload = (e) => {
@@ -44,107 +82,146 @@ export function ResumeManager() {
       setError("That file is too large. Please upload something under 4MB.");
       return;
     }
-    run(() => uploadResume(file));
+    setUploading(true);
+    run(() => api.upload(file)).finally(() => setUploading(false));
   };
 
-  const setCurrent = (id) => run(() => setCurrentResume(id));
-  const removeVersion = (id) => run(() => deleteResume(id));
-  const download = (v) => downloadResume(v).catch((err) => setError(err.message));
+  const removeVersion = async () => {
+    setRemoving(true);
+    await run(() => api.remove(pendingRemove.id));
+    setRemoving(false);
+    setPendingRemove(null);
+  };
 
-  const current = versions.find((v) => v.current);
-  const history = versions.filter((v) => !v.current);
+  const show = (v) => api.view(v).catch((err) => setError(err.message));
+  const download = (v) => api.download(v).catch((err) => setError(err.message));
+
+  const current = cfg.versioned ? versions.find((v) => v.current) : null;
+  const rest = cfg.versioned ? versions.filter((v) => !v.current) : versions;
+
+  const viewButton = (v, variant = "ghost") =>
+    canPreview(v) && (
+      <Button variant={variant} size="sm" onClick={() => show(v)} aria-label={`View ${v.fileName}`}>
+        View
+      </Button>
+    );
 
   return (
-    <div className="resume-card">
-      <div className="resume-card-header">
+    <section className="resume" aria-labelledby={titleId}>
+      <div className="resume-top">
         <div>
-          <h2 className="resume-title">Resume</h2>
+          <h2 className="resume-title" id={titleId}>{cfg.title}</h2>
           <p className="resume-subtitle">
             {versions.length > 0
-              ? `${versions.length} version${versions.length > 1 ? "s" : ""} saved`
-              : "No resume uploaded yet"}
+              ? cfg.versioned
+                ? `${versions.length} version${versions.length > 1 ? "s" : ""} saved`
+                : `${versions.length} saved`
+              : cfg.hint}
           </p>
         </div>
-        <button
-          type="button"
-          className="btn btn-edit resume-upload-btn"
+        <Button
+          className="resume-upload"
+          variant={versions.length ? "ghost" : "primary"}
+          loading={uploading}
           onClick={() => fileInputRef.current?.click()}
         >
-          {current ? "Upload new version" : "Upload resume"}
-        </button>
+          {versions.length ? cfg.uploadNext : cfg.uploadFirst}
+        </Button>
         <input
           ref={fileInputRef}
           type="file"
           accept=".pdf,.doc,.docx"
           className="resume-file-input"
+          aria-label={`Choose a ${cfg.noun} file`}
           onChange={handleUpload}
         />
       </div>
 
-      {error && <p className="resume-error">{error}</p>}
+      <Alert onDismiss={() => setError("")}>{error}</Alert>
 
-      {current ? (
-        <div className="resume-current">
-          <div className="resume-file-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
-              <path d="M6 2h9l5 5v15H6z" />
-              <path d="M15 2v5h5" />
-            </svg>
-          </div>
-          <div className="resume-file-meta">
-            <p className="resume-file-name">{current.fileName}</p>
-            <p className="resume-file-detail">
-              {formatFileSize(current.fileSize)} · Uploaded{" "}
-              {formatUploadDate(current.uploadedAt)}
-            </p>
-          </div>
-          <button
-            type="button"
-            className="resume-download-link"
-            onClick={() => download(current)}
-          >
-            Download
-          </button>
-        </div>
+      {!loaded ? (
+        <Skeleton height="76px" style={{ borderRadius: 8 }} />
+      ) : versions.length === 0 ? (
+        <p className="resume-empty">{cfg.empty}</p>
       ) : (
-        <p className="resume-empty">
-          Upload a PDF or Word document so it's ready whenever you apply.
-        </p>
+        <>
+          {current && (
+            <div className="resume-current">
+              <div className="resume-file-icon" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+                  <path d="M6 2h9l5 5v15H6z" />
+                  <path d="M15 2v5h5" />
+                </svg>
+              </div>
+              <div className="resume-file-meta">
+                <p className="resume-file-name">{current.fileName}</p>
+                <p className="resume-file-detail">
+                  <span className="resume-badge">Current</span>
+                  {formatFileSize(current.fileSize)}, uploaded {formatUploadDate(current.uploadedAt)}
+                </p>
+              </div>
+              {viewButton(current, "ghost")}
+              <Button variant="soft" size="sm" onClick={() => download(current)}>
+                Download
+              </Button>
+            </div>
+          )}
+
+          {rest.length > 0 && (
+            <div className={current ? "resume-history" : undefined}>
+              {cfg.versioned && <h3 className="resume-history-label">Earlier versions</h3>}
+              <ul className="resume-history-list">
+                {rest.map((v) => (
+                  <li className="resume-history-item" key={v.id}>
+                    <div>
+                      <p className="resume-file-name">{v.fileName}</p>
+                      <p className="resume-file-detail">
+                        {formatFileSize(v.fileSize)}, uploaded {formatUploadDate(v.uploadedAt)}
+                      </p>
+                    </div>
+                    <div className="resume-history-actions">
+                      {cfg.versioned && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => run(() => api.setCurrent(v.id))}
+                        >
+                          Make current
+                        </Button>
+                      )}
+                      {viewButton(v)}
+                      <Button variant="ghost" size="sm" onClick={() => download(v)}>
+                        Download
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="resume-remove"
+                        aria-label={`Remove ${v.fileName}`}
+                        onClick={() => setPendingRemove(v)}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </>
       )}
 
-      {history.length > 0 && (
-        <div className="resume-history">
-          <p className="resume-history-label">Earlier versions</p>
-          <ul className="resume-history-list">
-            {history.map((v) => (
-              <li className="resume-history-item" key={v.id}>
-                <div className="resume-history-meta">
-                  <p className="resume-file-name">{v.fileName}</p>
-                  <p className="resume-file-detail">
-                    {formatFileSize(v.fileSize)} · {formatUploadDate(v.uploadedAt)}
-                  </p>
-                </div>
-                <div className="resume-history-actions">
-                  <button type="button" onClick={() => setCurrent(v.id)}>
-                    Make current
-                  </button>
-                  <button type="button" onClick={() => download(v)}>
-                    Download
-                  </button>
-                  <button
-                    type="button"
-                    className="resume-remove"
-                    onClick={() => removeVersion(v.id)}
-                  >
-                    Remove
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </div>
+      <ConfirmDialog
+        open={!!pendingRemove}
+        title={`Remove this ${cfg.noun}?`}
+        confirmLabel="Remove"
+        busy={removing}
+        onConfirm={removeVersion}
+        onCancel={() => setPendingRemove(null)}
+      >
+        {pendingRemove && `${pendingRemove.fileName} will be deleted and detached from any application using it. This can't be undone.`}
+      </ConfirmDialog>
+    </section>
   );
 }
 

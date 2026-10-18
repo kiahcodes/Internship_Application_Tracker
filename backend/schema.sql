@@ -28,6 +28,8 @@ CREATE TABLE IF NOT EXISTS resumes (
   file_size INT NOT NULL,
   data LONGBLOB NOT NULL,
   is_current TINYINT(1) NOT NULL DEFAULT 0,
+  -- Cover letters are stored here too, just with a different kind.
+  kind ENUM('resume','cover_letter') NOT NULL DEFAULT 'resume',
   uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
@@ -59,10 +61,18 @@ CREATE TABLE IF NOT EXISTS applications (
   internship_id INT NULL,
   title VARCHAR(255) NOT NULL,
   status ENUM('Applied','Interview','Offer') NOT NULL DEFAULT 'Applied',
+  -- The resume version sent with this application (NULL if none or later deleted).
+  resume_id INT NULL,
+  -- Cover letter text written for this application.
+  cover_letter MEDIUMTEXT NULL,
+  -- An uploaded cover letter file (a resumes row with kind = 'cover_letter').
+  cover_letter_id INT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uq_user_internship (user_id, internship_id),
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (internship_id) REFERENCES internships(id) ON DELETE SET NULL
+  FOREIGN KEY (internship_id) REFERENCES internships(id) ON DELETE SET NULL,
+  FOREIGN KEY (resume_id) REFERENCES resumes(id) ON DELETE SET NULL,
+  FOREIGN KEY (cover_letter_id) REFERENCES resumes(id) ON DELETE SET NULL
 );
 
 INSERT INTO internships (company, role, location, lat, lon)
