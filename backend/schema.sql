@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS applications (
   user_id INT NOT NULL,
   internship_id INT NULL,
   title VARCHAR(255) NOT NULL,
-  status ENUM('Applied','Interview','Offer') NOT NULL DEFAULT 'Applied',
+  status ENUM('Applied','OA','Interview','Offer','Rejected') NOT NULL DEFAULT 'Applied',
   -- The resume version sent with this application (NULL if none or later deleted).
   resume_id INT NULL,
   -- Cover letter text written for this application.
@@ -73,6 +73,82 @@ CREATE TABLE IF NOT EXISTS applications (
   FOREIGN KEY (internship_id) REFERENCES internships(id) ON DELETE SET NULL,
   FOREIGN KEY (resume_id) REFERENCES resumes(id) ON DELETE SET NULL,
   FOREIGN KEY (cover_letter_id) REFERENCES resumes(id) ON DELETE SET NULL
+);
+
+-- Every move between stages, so analytics can measure how long replies take.
+CREATE TABLE IF NOT EXISTS application_events (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  application_id INT NOT NULL,
+  user_id INT NOT NULL,
+  status ENUM('Applied','OA','Interview','Offer','Rejected') NOT NULL,
+  at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_events_app (application_id),
+  FOREIGN KEY (application_id) REFERENCES applications(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- ---------- Interview prep ----------
+CREATE TABLE IF NOT EXISTS prep_companies (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  name VARCHAR(100) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_prep_company (user_id, name),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS prep_items (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  company_id INT NOT NULL,
+  user_id INT NOT NULL,
+  text VARCHAR(300) NOT NULL,
+  done TINYINT(1) NOT NULL DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (company_id) REFERENCES prep_companies(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Links to DSA problems, notes or anything else useful for one company.
+CREATE TABLE IF NOT EXISTS prep_links (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  company_id INT NOT NULL,
+  user_id INT NOT NULL,
+  title VARCHAR(150) NOT NULL,
+  url VARCHAR(500) NOT NULL,
+  kind ENUM('dsa','notes','other') NOT NULL DEFAULT 'notes',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (company_id) REFERENCES prep_companies(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS interview_rounds (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  company_id INT NOT NULL,
+  user_id INT NOT NULL,
+  round_type VARCHAR(40) NOT NULL DEFAULT 'Technical',
+  held_on DATE NULL,
+  reflection TEXT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (company_id) REFERENCES prep_companies(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- A question may belong to a round, or just sit in the company's question bank.
+-- box / next_review drive the quiz (a Leitner box: right answers are asked less often).
+CREATE TABLE IF NOT EXISTS interview_questions (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  company_id INT NOT NULL,
+  user_id INT NOT NULL,
+  round_id INT NULL,
+  question TEXT NOT NULL,
+  answer TEXT NULL,
+  box TINYINT NOT NULL DEFAULT 1,
+  next_review DATE NOT NULL,
+  last_reviewed DATE NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (company_id) REFERENCES prep_companies(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (round_id) REFERENCES interview_rounds(id) ON DELETE SET NULL
 );
 
 INSERT INTO internships (company, role, location, lat, lon)

@@ -35,13 +35,13 @@
 .nav-links {
   display: flex;
   align-items: center;
-  gap: 1.75rem;
+  gap: 1.4rem;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.nav-links a:not(.nav-auth-btn) {
+.nav-links a:not(.nav-auth-btn):not(.nav-avatar) {
   position: relative;
   padding: 0.4rem 0;
   color: var(--c2c-ink-soft);
@@ -50,7 +50,7 @@
   font-weight: 600;
   transition: color 0.2s;
 }
-.nav-links a:not(.nav-auth-btn)::after {
+.nav-links a:not(.nav-auth-btn):not(.nav-avatar)::after {
   content: "";
   position: absolute;
   left: 0;
@@ -62,11 +62,11 @@
   transform-origin: left;
   transition: transform 0.2s var(--ease);
 }
-.nav-links a:not(.nav-auth-btn):hover {
+.nav-links a:not(.nav-auth-btn):not(.nav-avatar):hover {
   color: var(--c2c-ink);
 }
-.nav-links a:not(.nav-auth-btn):hover::after,
-.nav-links a[aria-current="page"]::after {
+.nav-links a:not(.nav-auth-btn):not(.nav-avatar):hover::after,
+.nav-links a[aria-current="page"]:not(.nav-avatar)::after {
   transform: scaleX(1);
 }
 .nav-links a[aria-current="page"] {
@@ -94,6 +94,45 @@
 }
 .nav-auth-btn:active {
   transform: scale(0.97);
+}
+
+.nav-avatar {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-radius: 999px;
+  text-decoration: none;
+}
+.nav-avatar-mark {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--c2c-green);
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 500;
+  line-height: 1;
+  transition: background 0.16s var(--ease), box-shadow 0.16s var(--ease), transform 0.16s var(--ease);
+}
+.nav-avatar:hover .nav-avatar-mark {
+  background: var(--c2c-green-deep);
+}
+.nav-avatar:active .nav-avatar-mark {
+  transform: scale(0.95);
+}
+/* Current page: a ring, like the underline on the text links. */
+.nav-avatar[aria-current="page"] .nav-avatar-mark {
+  box-shadow: 0 0 0 2px var(--c2c-cream), 0 0 0 4px var(--c2c-green);
+}
+.nav-avatar-label {
+  display: none; /* the avatar stands alone in the bar; the drawer spells it out */
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 500;
+  color: var(--c2c-ink);
 }
 
 .hamburger {
@@ -126,7 +165,7 @@
   transform: translateY(-8px) rotate(-45deg);
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1080px) {
   .custom-navbar {
     padding: 0.6rem 1rem 0.6rem 1.25rem;
   }
@@ -160,7 +199,10 @@
     visibility: visible;
     transition: transform 0.3s var(--ease);
   }
-  .nav-links a:not(.nav-auth-btn) {
+  .nav-avatar-label {
+    display: inline;
+  }
+  .nav-links a:not(.nav-auth-btn):not(.nav-avatar) {
     font-family: var(--font-display);
     font-size: 1.5rem;
     font-weight: 500;

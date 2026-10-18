@@ -4,13 +4,15 @@ import bcrypt from "bcryptjs";
 import multer from "multer";
 import "dotenv/config";
 import { pool } from "./db.js";
+import { computeAnalytics } from "./analytics.js";
+import { mountPrep } from "./prep.js";
 import { startScraperSchedule } from "./scrapers/schedule.js";
 import { ROLES, PERMISSIONS, requireAuth, requirePermission, signToken } from "./auth.js";
 
 const MAX_RESUME_BYTES = 4 * 1024 * 1024;
 const MAX_RESUME_VERSIONS = 5;
 const MAX_COVER_LETTER_FILES = 25; // letters are usually one per application
-const STATUSES = ["Applied", "Interview", "Offer"];
+const STATUSES = ["Applied", "OA", "Interview", "Offer", "Rejected"];
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const app = express();
@@ -258,8 +260,13 @@ app.patch("/api/tracker/:id", requireAuth, h(async (req, res) => {
   const { status, resumeId, coverLetter, coverLetterId } = req.body;
   const sets = [];
   const params = [];
+  let statusChanged = false;
   if (status !== undefined) {
     if (!STATUSES.includes(status)) return res.status(400).json({ error: "Invalid status" });
+    const [current] = await pool.query("SELECT status FROM applications WHERE id = ? AND user_id = ?", [
+      req.params.id, req.userId,
+    ]);
+    statusChanged = current.length > 0 && current[0].status !== status;
     sets.push("status = ?");
     params.push(status);
   }
@@ -299,6 +306,11 @@ app.patch("/api/tracker/:id", requireAuth, h(async (req, res) => {
     [...params, req.params.id, req.userId],
   );
   if (!result.affectedRows) return res.status(404).json({ error: "Card not found" });
+  if (statusChanged) {
+    await pool.query("INSERT INTO application_events (application_id, user_id, status) VALUES (?, ?, ?)", [
+      req.params.id, req.userId, status,
+    ]);
+  }
   res.json({ id: Number(req.params.id), status, resumeId, coverLetter, coverLetterId });
 }));
 
@@ -307,6 +319,25 @@ app.delete("/api/tracker/:id", requireAuth, h(async (req, res) => {
     req.params.id, req.userId,
   ]);
   res.status(204).end();
+}));
+
+mountPrep(app);
+
+// ---------- Analytics ----------
+app.get("/api/analytics", requireAuth, h(async (req, res) => {
+  const [apps] = await pool.query(
+    `SELECT a.id, a.status, a.created_at, a.resume_id, r.file_name AS resume_name, i.source
+     FROM applications a
+     LEFT JOIN resumes r ON r.id = a.resume_id
+     LEFT JOIN internships i ON i.id = a.internship_id
+     WHERE a.user_id = ?`,
+    [req.userId],
+  );
+  const [events] = await pool.query(
+    "SELECT application_id, status, at FROM application_events WHERE user_id = ? ORDER BY at",
+    [req.userId],
+  );
+  res.json(computeAnalytics(apps, events));
 }));
 
 // ---------- Resumes & cover letters ----------

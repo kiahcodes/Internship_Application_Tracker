@@ -6,11 +6,13 @@ import { CoverLetterDialog } from "../components/CoverLetterDialog.jsx";
 import { Alert, Button, Skeleton } from "../components/ui.jsx";
 import "./Tracker.css";
 
-const COLUMNS = ["Applied", "Interview", "Offer"];
+const COLUMNS = ["Applied", "OA", "Interview", "Offer", "Rejected"];
 const HINTS = {
   Applied: "Applications you've sent land here.",
-  Interview: "Drag a card here once you hear back.",
+  OA: "Online assessments and coding tests go here.",
+  Interview: "Drag a card here once you get an interview.",
   Offer: "Your wins. Hopefully a long list.",
+  Rejected: "Keep these. They still show up in your analytics.",
 };
 
 export function Tracker() {
@@ -93,7 +95,7 @@ export function Tracker() {
       return {
         ...r,
         sent: used.length,
-        interviews: used.filter((c) => c.status !== "Applied").length,
+        interviews: used.filter((c) => c.status === "Interview" || c.status === "Offer").length,
         offers: used.filter((c) => c.status === "Offer").length,
       };
     })
@@ -164,7 +166,7 @@ export function Tracker() {
             ? "Loading your board…"
             : cards.length === 0
               ? "Nothing tracked yet. Add your first application below."
-              : `${cards.length} tracked · ${counts.Interview} interviewing · ${counts.Offer} ${counts.Offer === 1 ? "offer" : "offers"}`}
+              : `${cards.length} tracked · ${counts.OA + counts.Interview} in progress · ${counts.Offer} ${counts.Offer === 1 ? "offer" : "offers"}`}
         </p>
       </header>
 

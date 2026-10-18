@@ -68,6 +68,12 @@
   border-radius: 10px;
   box-shadow: var(--shadow-sm);
 }
+.app-oa {
+  --accent: var(--stage-oa);
+}
+.app-rejected {
+  --accent: var(--stage-rejected);
+}
 .app-interview {
   --accent: var(--stage-interview);
 }

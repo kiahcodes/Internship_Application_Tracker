@@ -17,8 +17,12 @@
   --stage-applied-tint: #fbf0d6;
   --stage-interview: #2f5b7a;
   --stage-interview-tint: #e4eef5;
+  --stage-oa: #1f6664;
+  --stage-oa-tint: #dff0ee;
   --stage-offer: var(--c2c-green);
   --stage-offer-tint: var(--c2c-green-tint);
+  --stage-rejected: #8a3f38;
+  --stage-rejected-tint: #f6e6e3;
 
   --font-display: "Newsreader", Georgia, "Times New Roman", serif;
   --font-body: "Plus Jakarta Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
@@ -48,6 +52,7 @@ body {
   color: var(--c2c-ink);
   background: var(--c2c-cream);
   -webkit-font-smoothing: antialiased;
+  overflow-x: clip; /* the off-screen mobile nav drawer must not widen the page */
 }
 
 button,

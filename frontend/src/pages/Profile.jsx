@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { deleteAccount, loadStudent, saveStudent } from "../utils/student";
-import { getRole, logout } from "../utils/auth";
+import { getRole, logout, setSessionName } from "../utils/auth";
 import { ResumeManager } from "../components/ResumeManager.jsx";
 import { Alert, Button, ConfirmDialog, Field, Skeleton } from "../components/ui.jsx";
 import "./Profile.css";
@@ -68,6 +68,7 @@ export function Profile() {
       const next = await saveStudent(draft);
       setStudent(next);
       setDraft(next);
+      setSessionName(next.name);
       setError("");
       setIsEditing(false);
       setSaved(true);

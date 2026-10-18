@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import logo from "../assets/logo.png";
-import { isAuthenticated } from "../utils/auth";
+import { isAuthenticated, loadSession } from "../utils/auth";
 import "./Navbar.css";
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   useLocation(); // re-render on navigation so the login state below stays current
   const loggedIn = isAuthenticated();
+  const initial = (loadSession()?.name || "?").trim().charAt(0).toUpperCase();
 
   const closeMenu = () => setIsOpen(false);
 
@@ -52,12 +53,23 @@ export function Navbar() {
                 Documents
               </NavLink>
             </li>
+            <li>
+              <NavLink to="/analytics" onClick={closeMenu}>
+                Analytics
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to="/prep" onClick={closeMenu}>
+                Prep
+              </NavLink>
+            </li>
           </>
         )}
         {loggedIn && (
           <li>
-            <NavLink to="/profile" onClick={closeMenu}>
-              Profile
+            <NavLink to="/profile" className="nav-avatar" title="Profile" onClick={closeMenu}>
+              <span className="nav-avatar-mark" aria-hidden="true">{initial}</span>
+              <span className="nav-avatar-label">Profile</span>
             </NavLink>
           </li>
         )}

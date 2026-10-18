@@ -82,6 +82,15 @@ if (!letterIdCols.length) {
   );
   console.log("Added applications.cover_letter_id");
 }
+// Older applications tables only know Applied / Interview / Offer.
+const [[statusCol]] = await conn.query(`SHOW COLUMNS FROM ${db}.applications LIKE 'status'`).then(([r]) => [r]);
+if (statusCol && !/'OA'/.test(statusCol.Type)) {
+  await conn.query(
+    `ALTER TABLE ${db}.applications MODIFY status
+     ENUM('Applied','OA','Interview','Offer','Rejected') NOT NULL DEFAULT 'Applied'`,
+  );
+  console.log("Added OA and Rejected stages.");
+}
 // Posted internships have no coordinates, so lat/lon must allow NULL.
 await conn.query(`ALTER TABLE ${db}.internships MODIFY lat DOUBLE NULL, MODIFY lon DOUBLE NULL`);
 console.log("Database ready.");

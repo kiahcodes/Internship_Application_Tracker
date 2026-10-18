@@ -41,6 +41,11 @@ export const login = ({ email, password }) =>
 export const signup = ({ name, email, password, role }) =>
   authRequest("signup", { name, email, password, role });
 
+export function setSessionName(name) {
+  const session = loadSession();
+  if (session) localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ ...session, name }));
+}
+
 export function clearSession() {
   localStorage.removeItem(AUTH_STORAGE_KEY);
 }

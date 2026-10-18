@@ -8,7 +8,7 @@ import { CoverLetterDialog } from "../components/CoverLetterDialog.jsx";
 import { ResumeManager } from "../components/ResumeManager.jsx";
 import "./Documents.css";
 
-const STAGES = ["Applied", "Interview", "Offer"];
+const STAGES = ["Applied", "OA", "Interview", "Offer", "Rejected"];
 
 function Doc({ label, name, file, onView, onDownload, children }) {
   return (
