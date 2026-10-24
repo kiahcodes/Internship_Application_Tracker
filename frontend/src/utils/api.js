@@ -8,6 +8,9 @@ export async function api(path, { method = "GET", body, raw = false } = {}) {
   let payload;
   if (body instanceof FormData) {
     payload = body;
+  } else if (typeof body === "string") {
+    headers["Content-Type"] = "text/csv"; // the only plain-text body we send is a spreadsheet import
+    payload = body;
   } else if (body !== undefined) {
     headers["Content-Type"] = "application/json";
     payload = JSON.stringify(body);
@@ -17,7 +20,7 @@ export async function api(path, { method = "GET", body, raw = false } = {}) {
   try {
     res = await fetch(`/api${path}`, { method, headers, body: payload });
   } catch {
-    throw new Error("Can't reach the server. Is the backend running?");
+    throw new Error("Can't reach the server right now. Please check your connection and try again.");
   }
 
   if (res.status === 401 && token) {

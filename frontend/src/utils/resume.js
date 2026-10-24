@@ -69,3 +69,22 @@ export function formatUploadDate(isoString) {
     day: "numeric",
   });
 }
+
+/**
+ * Which applications used which resume. Applications whose resume was later deleted keep its
+ * name, so they are grouped by that name rather than lost.
+ */
+export function resumeUsage(resumes, cards) {
+  const byName = new Map();
+  const none = [];
+  for (const c of cards) {
+    if (c.resumeId && resumes.some((r) => r.id === c.resumeId)) continue;
+    if (!c.resumeName) none.push(c);
+    else byName.set(c.resumeName, [...(byName.get(c.resumeName) ?? []), c]);
+  }
+  return {
+    versions: resumes.map((resume) => ({ resume, sent: cards.filter((c) => c.resumeId === resume.id) })),
+    removed: [...byName].map(([name, sent]) => ({ name, sent })),
+    none,
+  };
+}

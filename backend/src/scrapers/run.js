@@ -2,6 +2,7 @@ import { fileURLToPath } from "node:url";
 import { pool } from "../db.js";
 import { SOURCES } from "./sources.js";
 import { coordsFor, isIndia, isRemote } from "./geo.js";
+import { extractFacts } from "./facts.js";
 
 // Idempotent migration so an existing DB gets the scraper columns.
 async function ensureSchema() {
@@ -53,17 +54,22 @@ export async function runScrape() {
       const jobs = (await fetchJobs()).filter((j) => j.source === "internshala" || isIndia(j.location) || isRemote(j.location));
       for (const j of jobs) {
         const [lat, lon] = coordsFor(j.location);
+        const facts = extractFacts(j);
         const posted = j.posted_at ? new Date(j.posted_at) : null;
         await pool.query(
           `INSERT INTO internships
-             (company, role, location, lat, lon, source, external_id, url, description, posted_at, scraped_at, is_active)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), 1)
+             (company, role, location, lat, lon, source, external_id, url, description, posted_at, scraped_at, is_active,
+              work_mode, stipend_min, stipend_max, duration_months)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), 1, ?, ?, ?, ?)
            ON DUPLICATE KEY UPDATE company = VALUES(company), role = VALUES(role),
              location = VALUES(location), lat = VALUES(lat), lon = VALUES(lon), url = VALUES(url),
              description = VALUES(description), posted_at = VALUES(posted_at),
-             scraped_at = NOW(), is_active = 1`,
+             scraped_at = NOW(), is_active = 1, work_mode = VALUES(work_mode),
+             stipend_min = VALUES(stipend_min), stipend_max = VALUES(stipend_max),
+             duration_months = VALUES(duration_months)`,
           [j.company.slice(0, 100), j.role.slice(0, 150), j.location.slice(0, 100), lat, lon,
-           j.source, j.external_id, j.url, j.description, posted && !isNaN(posted) ? posted : null],
+           j.source, j.external_id, j.url, j.description, posted && !isNaN(posted) ? posted : null,
+           facts.work_mode, facts.stipend_min, facts.stipend_max, facts.duration_months],
         );
       }
       saved += jobs.length;

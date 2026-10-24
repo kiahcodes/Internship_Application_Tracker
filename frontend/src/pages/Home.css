@@ -2,5 +2,199 @@
   width: 100%;
   min-height: 100vh;
   min-height: 100dvh;
-  background: var(--c2c-cream, #f7f0e6);
+  background:
+    radial-gradient(900px 480px at 85% -5%, rgba(14, 104, 24, 0.12), transparent 60%),
+    radial-gradient(700px 420px at -5% 15%, rgba(214, 160, 70, 0.18), transparent 60%),
+    var(--c2c-cream, #f7f0e6);
+}
+
+/* ---------- Dynamic bits ---------- */
+.stats {
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 0 2rem;
+  display: flex;
+  gap: 3rem;
+}
+.stat { display: flex; flex-direction: column; }
+.stat-n {
+  font-size: 2.5rem;
+  font-weight: 500;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--c2c-ink);
+}
+.stat-l { margin-top: 0.4rem; font-size: 0.9rem; color: var(--c2c-ink-soft); }
+
+
+/* ---------- Featured: resume tracking ---------- */
+.feature-wrap {
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 2.5rem 2rem 0;
+}
+.feature {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 3rem;
+  align-items: center;
+  padding: clamp(1.75rem, 4vw, 3.25rem);
+  border-radius: 24px;
+  color: #f4efe3;
+  overflow: hidden;
+  background:
+    radial-gradient(520px 320px at 100% 100%, rgba(242, 201, 76, 0.16), transparent 65%),
+    linear-gradient(135deg, #093f10 0%, #0e6818 60%, #15803a 100%);
+  box-shadow: 0 2px 4px rgba(10, 79, 18, 0.2), 0 28px 60px rgba(10, 79, 18, 0.26);
+}
+.feature h2 {
+  margin: 0 0 1rem;
+  max-width: 16ch;
+  font-size: clamp(1.9rem, 1.1rem + 2.4vw, 3rem);
+  font-weight: 500;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  color: #fff;
+}
+.feature p {
+  margin: 0 0 1.75rem;
+  max-width: 44ch;
+  line-height: 1.65;
+  color: rgba(244, 239, 227, 0.88);
+}
+.feature-go {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 1.4rem;
+  border-radius: 999px;
+  background: #f2c94c;
+  color: #2f2203;
+  font-weight: 700;
+  text-decoration: none;
+  transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease);
+}
+.feature-go:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25); }
+.feature-go:focus-visible { outline-color: #fff; }
+
+/* Resume stack */
+.stack-tabs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 1.25rem;
+}
+.stack-tab {
+  min-height: 40px;
+  padding: 0 0.95rem;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 999px;
+  background: transparent;
+  color: #f4efe3;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.stack-tab:hover { background: rgba(255, 255, 255, 0.12); }
+.stack-tab[aria-selected="true"] { background: #f2c94c; border-color: #f2c94c; color: #2f2203; }
+.stack-tab:focus-visible { outline-color: #fff; }
+
+.stack-hint { margin-left: 0.5rem; font-size: 0.82rem; color: rgba(244, 239, 227, 0.7); }
+.stack-sheets {
+  position: relative;
+  height: 290px;
+  margin-right: 2.5rem;
+}
+.sheet {
+  position: absolute;
+  inset: 0;
+  padding: 1.25rem 1.4rem;
+  border-radius: 6px;
+  background: #fffdf9;
+  color: var(--c2c-ink);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2), 0 14px 30px rgba(0, 0, 0, 0.22);
+  transform-origin: 0% 100%;
+  transition: transform 0.45s var(--ease), opacity 0.3s;
+}
+.sheet[data-depth="0"] { z-index: 3; transform: none; }
+.sheet[data-depth="1"] { z-index: 2; transform: translate(1.1rem, -0.9rem) rotate(2.2deg); }
+.sheet[data-depth="2"] { z-index: 1; transform: translate(2.2rem, -1.8rem) rotate(4.4deg); }
+.sheet[data-depth]:not([data-depth="0"]) > :not(.sheet-head) { visibility: hidden; }
+.sheet-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-bottom: 0.7rem;
+  border-bottom: 2px solid var(--c2c-ink);
+}
+.sheet-name { font-family: var(--font-display); font-size: 1.25rem; font-weight: 600; }
+.sheet-focus { font-size: 0.8rem; font-weight: 600; color: var(--c2c-ink-soft); }
+.sheet-lines { display: grid; gap: 0.4rem; margin: 0.9rem 0; }
+.sheet-lines i { display: block; height: 6px; border-radius: 3px; background: var(--c2c-line); }
+.sheet-lines i:nth-child(2) { width: 82%; }
+.sheet-lines i:nth-child(3) { width: 58%; }
+.sheet-label { margin: 0 0 0.35rem; font-size: 0.8rem; font-weight: 700; color: var(--c2c-ink-soft); }
+.sheet-sent { margin: 0; padding: 0; list-style: none; }
+.sheet-sent li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid var(--c2c-line);
+  font-weight: 600;
+}
+.sheet-stage {
+  padding: 0.1rem 0.55rem;
+  border-radius: 3px;
+  background: #f2c94c;
+  color: #2f2203;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+.sheet-interview { background: var(--stage-interview-tint); color: var(--stage-interview); }
+.sheet-oa { background: var(--stage-oa-tint); color: var(--stage-oa); }
+.sheet-offer { background: var(--stage-offer-tint); color: var(--stage-offer); }
+.sheet-rejected { background: var(--stage-rejected-tint); color: var(--stage-rejected); }
+.sheet-applied { background: var(--stage-applied-tint); color: var(--stage-applied); }
+
+.steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 2rem;
+  margin: 2.25rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+.steps li { padding-top: 1rem; border-top: 2px solid var(--c2c-ink); }
+.step-n {
+  display: inline-grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  background: var(--c2c-green);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+.steps h3 { margin: 0.7rem 0 0.35rem; font-size: 1.3rem; font-weight: 500; }
+.steps p { margin: 0; max-width: 34ch; line-height: 1.55; color: var(--c2c-ink-soft); }
+
+@media (max-width: 860px) {
+  .steps { grid-template-columns: 1fr; gap: 1.25rem; }
+  .feature-wrap { padding: 1.5rem 1.25rem 0; }
+  .feature { grid-template-columns: 1fr; gap: 2rem; }
+  .stats { padding: 0 1.25rem; gap: 1.75rem; }
+}
+@media (max-width: 520px) {
+  .stack-sheets { margin-right: 1.5rem; height: 310px; }
+  .stack-tab { padding: 0 0.7rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sheet, .feature-go { transition: none; }
 }

@@ -318,6 +318,38 @@
   color: var(--c2c-ink-soft);
 }
 
+/* ---------- DSA questions (company-wise LeetCode list) ---------- */
+.pr-form--lc {
+  display: grid;
+  grid-template-columns: 1fr 9rem 1fr;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+.pr-lc li {
+  padding: 0.35rem 0;
+}
+.pr-lc a {
+  padding: 0.4rem 0;
+}
+.pr-diff {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+}
+.pr-diff--easy {
+  color: var(--stage-offer);
+  background: var(--stage-offer-tint);
+}
+.pr-diff--medium {
+  color: var(--stage-applied);
+  background: var(--stage-applied-tint);
+}
+.pr-diff--hard {
+  color: var(--stage-rejected);
+  background: var(--stage-rejected-tint);
+}
+
 /* ---------- Interviews ---------- */
 .pr-tabbar {
   margin-bottom: 1.25rem;
@@ -480,7 +512,8 @@
   .pr-side {
     position: static;
   }
-  .pr-form--links {
+  .pr-form--links,
+  .pr-form--lc {
     grid-template-columns: 1fr;
   }
 }

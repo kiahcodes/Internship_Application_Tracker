@@ -17,6 +17,25 @@ CREATE TABLE IF NOT EXISTS profiles (
   semester VARCHAR(50) NOT NULL DEFAULT '',
   bio TEXT,
   skills VARCHAR(500) NOT NULL DEFAULT '',
+  branch VARCHAR(100) NOT NULL DEFAULT '',
+  grad_year SMALLINT NULL,
+  cgpa DECIMAL(4,2) NULL,
+  phone VARCHAR(30) NOT NULL DEFAULT '',
+  github VARCHAR(200) NOT NULL DEFAULT '',
+  linkedin VARCHAR(200) NOT NULL DEFAULT '',
+  portfolio VARCHAR(200) NOT NULL DEFAULT '',
+  preferred_locations VARCHAR(300) NOT NULL DEFAULT '',
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- One-time password reset links. Only a hash of the token is stored.
+CREATE TABLE IF NOT EXISTS password_resets (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  token_hash CHAR(64) NOT NULL,
+  expires_at DATETIME NOT NULL,
+  used_at DATETIME NULL,
+  KEY idx_reset_hash (token_hash),
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
@@ -50,6 +69,16 @@ CREATE TABLE IF NOT EXISTS internships (
   scraped_at TIMESTAMP NULL,
   is_active TINYINT(1) NOT NULL DEFAULT 1,
   posted_by INT NULL,
+  work_mode ENUM('onsite','remote','hybrid') NOT NULL DEFAULT 'onsite',
+  -- Monthly stipend range in INR. 0/0 means unpaid, NULL means not listed.
+  stipend_min INT NULL,
+  stipend_max INT NULL,
+  duration_months TINYINT NULL,
+  deadline DATE NULL,
+  -- Eligibility; NULL means open to everyone. branches is a comma-separated list.
+  min_cgpa DECIMAL(4,2) NULL,
+  batch_year SMALLINT NULL,
+  branches VARCHAR(255) NULL,
   UNIQUE KEY uq_source_ext (source, external_id)
 );
 
@@ -67,6 +96,10 @@ CREATE TABLE IF NOT EXISTS applications (
   cover_letter MEDIUMTEXT NULL,
   -- An uploaded cover letter file (a resumes row with kind = 'cover_letter').
   cover_letter_id INT NULL,
+  -- For cards without a linked posting (hand-added or imported); linked cards use the posting's deadline.
+  deadline DATE NULL,
+  -- "Remind me on": shows up under Coming up on the Tracker.
+  remind_on DATE NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uq_user_internship (user_id, internship_id),
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,

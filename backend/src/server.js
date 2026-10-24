@@ -1,18 +1,23 @@
 import express from "express";
 import cors from "cors";
 import bcrypt from "bcryptjs";
+import crypto from "node:crypto";
 import multer from "multer";
 import "dotenv/config";
 import { pool } from "./db.js";
 import { computeAnalytics } from "./analytics.js";
 import { mountPrep } from "./prep.js";
+import { mountInternships } from "./internships.js";
 import { startScraperSchedule } from "./scrapers/schedule.js";
+import { sendMail } from "./mailer.js";
+import { rateLimit } from "./rateLimit.js";
+import { cleanProfile, shapeProfile } from "./profile.js";
+import { STATUSES, normalizeImport, parseDate, toCsv } from "./trackerCsv.js";
 import { ROLES, PERMISSIONS, requireAuth, requirePermission, signToken } from "./auth.js";
 
 const MAX_RESUME_BYTES = 4 * 1024 * 1024;
 const MAX_RESUME_VERSIONS = 5;
 const MAX_COVER_LETTER_FILES = 25; // letters are usually one per application
-const STATUSES = ["Applied", "OA", "Interview", "Offer", "Rejected"];
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const app = express();
@@ -36,6 +41,21 @@ const publicUser = (u) => ({
 });
 
 // ---------- Auth ----------
+const sameSecret = (a, b) => {
+  const hash = (v) => crypto.createHash("sha256").update(String(v)).digest();
+  return crypto.timingSafeEqual(hash(a), hash(b));
+};
+const byIp = (req) => req.ip;
+const loginLimit = rateLimit({
+  windowMs: 15 * 60 * 1000, max: 10,
+  key: (req) => `${req.ip}|${String(req.body?.email || "").toLowerCase()}`,
+  message: "Too many sign-in attempts. Please wait a few minutes and try again.",
+});
+const resetLimit = rateLimit({
+  windowMs: 15 * 60 * 1000, max: 5, key: byIp,
+  message: "Too many reset requests. Please wait a few minutes and try again.",
+});
+
 app.post("/api/auth/signup", h(async (req, res) => {
   const name = String(req.body.name || "").trim();
   const email = String(req.body.email || "").trim().toLowerCase();
@@ -45,6 +65,14 @@ app.post("/api/auth/signup", h(async (req, res) => {
   if (!EMAIL_RE.test(email)) return res.status(400).json({ error: "Enter a valid email" });
   if (password.length < 6)
     return res.status(400).json({ error: "Password must be at least 6 characters" });
+  // Anyone can pick "poster" in the form, so posting rights need a code only the placement cell hands out.
+  if (role === "poster") {
+    const expected = process.env.POSTER_INVITE_CODE;
+    if (!expected)
+      return res.status(403).json({ error: "Poster sign-ups are closed. Ask the administrator for access." });
+    if (!sameSecret(req.body.inviteCode || "", expected))
+      return res.status(403).json({ error: "That invite code isn't right" });
+  }
 
   const [existing] = await pool.query("SELECT id FROM users WHERE email = ?", [email]);
   if (existing.length) return res.status(409).json({ error: "That email is already registered" });
@@ -59,7 +87,7 @@ app.post("/api/auth/signup", h(async (req, res) => {
   res.status(201).json({ token: signToken(user), user });
 }));
 
-app.post("/api/auth/login", h(async (req, res) => {
+app.post("/api/auth/login", loginLimit, h(async (req, res) => {
   const email = String(req.body.email || "").trim().toLowerCase();
   const password = String(req.body.password || "");
   const [rows] = await pool.query("SELECT * FROM users WHERE email = ?", [email]);
@@ -67,6 +95,46 @@ app.post("/api/auth/login", h(async (req, res) => {
   if (!user || !(await bcrypt.compare(password, user.password_hash)))
     return res.status(401).json({ error: "Invalid email or password" });
   res.json({ token: signToken(user), user: publicUser(user) });
+}));
+
+// Password reset: a one-time link, valid for 30 minutes. The reply is the same whether or not the
+// email exists, so this can't be used to find out who has an account.
+app.post("/api/auth/forgot", resetLimit, h(async (req, res) => {
+  const email = String(req.body.email || "").trim().toLowerCase();
+  if (!EMAIL_RE.test(email)) return res.status(400).json({ error: "Enter a valid email" });
+  const [rows] = await pool.query("SELECT id, name FROM users WHERE email = ?", [email]);
+  if (rows[0]) {
+    const token = crypto.randomBytes(32).toString("hex");
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+    await pool.query("UPDATE password_resets SET used_at = NOW() WHERE user_id = ? AND used_at IS NULL", [rows[0].id]);
+    await pool.query(
+      "INSERT INTO password_resets (user_id, token_hash, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 30 MINUTE))",
+      [rows[0].id, tokenHash],
+    );
+    const base = process.env.APP_URL || "http://localhost:5173";
+    sendMail({
+      to: email,
+      subject: "Reset your Internship Tracker password",
+      text: `Hi ${rows[0].name},\n\nUse this link to choose a new password. It works once and expires in 30 minutes:\n${base}/reset-password?token=${token}\n\nIf you didn't ask for this, you can ignore this email.`,
+    }).catch((err) => console.error("[mail] reset email failed:", err.message));
+  }
+  res.json({ ok: true });
+}));
+
+app.post("/api/auth/reset", resetLimit, h(async (req, res) => {
+  const token = String(req.body.token || "");
+  const password = String(req.body.password || "");
+  if (password.length < 6) return res.status(400).json({ error: "Password must be at least 6 characters" });
+  const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+  const [rows] = await pool.query(
+    "SELECT id, user_id FROM password_resets WHERE token_hash = ? AND used_at IS NULL AND expires_at > NOW()",
+    [tokenHash],
+  );
+  if (!rows[0]) return res.status(400).json({ error: "This reset link has expired or was already used. Request a new one." });
+  const hash = await bcrypt.hash(password, 10);
+  await pool.query("UPDATE users SET password_hash = ? WHERE id = ?", [hash, rows[0].user_id]);
+  await pool.query("UPDATE password_resets SET used_at = NOW() WHERE user_id = ? AND used_at IS NULL", [rows[0].user_id]);
+  res.json({ ok: true });
 }));
 
 app.get("/api/auth/me", requireAuth, h(async (req, res) => {
@@ -100,19 +168,25 @@ app.delete("/api/account", requireAuth, h(async (req, res) => {
 
 // ---------- Profile ----------
 const profileQuery = `
-  SELECT u.name, u.email, p.course, p.semester, p.bio, p.skills
+  SELECT u.name, u.email, p.course, p.semester, p.bio, p.skills, p.branch, p.grad_year, p.cgpa,
+         p.phone, p.github, p.linkedin, p.portfolio, p.preferred_locations
   FROM users u LEFT JOIN profiles p ON p.user_id = u.id WHERE u.id = ?`;
 
 app.get("/api/profile", requireAuth, h(async (req, res) => {
   const [rows] = await pool.query(profileQuery, [req.userId]);
-  res.json(rows[0]);
+  res.json(shapeProfile(rows[0]));
 }));
 
 app.put("/api/profile", requireAuth, h(async (req, res) => {
-  const { name, email, course = "", semester = "", bio = "", skills = "" } = req.body;
+  const { name, email } = req.body;
   const cleanEmail = String(email || "").trim().toLowerCase();
   if (!String(name || "").trim()) return res.status(400).json({ error: "Name is required" });
   if (!EMAIL_RE.test(cleanEmail)) return res.status(400).json({ error: "Enter a valid email" });
+
+  const [[current]] = await pool.query(profileQuery, [req.userId]).then(([r]) => [r]);
+  const cleaned = cleanProfile(req.body, current);
+  if (cleaned.error) return res.status(400).json({ error: cleaned.error });
+  const v = cleaned.values;
 
   const [clash] = await pool.query("SELECT id FROM users WHERE email = ? AND id <> ?", [
     cleanEmail,
@@ -124,95 +198,29 @@ app.put("/api/profile", requireAuth, h(async (req, res) => {
     String(name).trim(), cleanEmail, req.userId,
   ]);
   await pool.query(
-    `INSERT INTO profiles (user_id, course, semester, bio, skills) VALUES (?, ?, ?, ?, ?)
-     ON DUPLICATE KEY UPDATE course = VALUES(course), semester = VALUES(semester),
-       bio = VALUES(bio), skills = VALUES(skills)`,
-    [req.userId, course, semester, bio, skills],
+    `INSERT INTO profiles (user_id, course, semester, bio, skills, branch, grad_year, cgpa, phone, github, linkedin, portfolio, preferred_locations)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE course = VALUES(course), semester = VALUES(semester), bio = VALUES(bio),
+       skills = VALUES(skills), branch = VALUES(branch), grad_year = VALUES(grad_year), cgpa = VALUES(cgpa),
+       phone = VALUES(phone), github = VALUES(github), linkedin = VALUES(linkedin),
+       portfolio = VALUES(portfolio), preferred_locations = VALUES(preferred_locations)`,
+    [req.userId, v.course, v.semester, v.bio, v.skills, v.branch, v.grad_year, v.cgpa, v.phone,
+     v.github, v.linkedin, v.portfolio, v.preferred_locations],
   );
   const [rows] = await pool.query(profileQuery, [req.userId]);
-  res.json(rows[0]);
+  res.json(shapeProfile(rows[0]));
 }));
 
 // ---------- Internships ----------
-app.get("/api/internships", requireAuth, h(async (req, res) => {
-  const [rows] = await pool.query(
-    `SELECT i.id, i.company, i.role, i.location, i.lat, i.lon,
-            i.url, i.source, i.description, i.posted_at,
-            (a.id IS NOT NULL) AS applied, (i.posted_by = ?) AS mine
-     FROM internships i
-     LEFT JOIN applications a ON a.internship_id = i.id AND a.user_id = ?
-     WHERE i.is_active = 1 OR a.id IS NOT NULL
-     ORDER BY i.posted_at IS NULL, i.posted_at DESC, i.id DESC`,
-    [req.userId, req.userId],
-  );
-  res.json(rows.map((r) => ({ ...r, applied: Boolean(r.applied), mine: Boolean(r.mine) })));
-}));
-
-// Applying creates a tracker card in "Applied"; un-applying removes it.
-app.post("/api/internships/:id/apply", requireAuth, h(async (req, res) => {
-  const [rows] = await pool.query("SELECT company, role FROM internships WHERE id = ?", [
-    req.params.id,
-  ]);
-  if (!rows[0]) return res.status(404).json({ error: "Internship not found" });
-  await pool.query(
-    `INSERT IGNORE INTO applications (user_id, internship_id, title, status, resume_id)
-     VALUES (?, ?, ?, 'Applied', (SELECT id FROM resumes WHERE user_id = ? AND is_current = 1 AND kind = 'resume' LIMIT 1))`,
-    [req.userId, req.params.id, `${rows[0].role} – ${rows[0].company}`, req.userId],
-  );
-  res.status(201).json({ applied: true });
-}));
-
-app.delete("/api/internships/:id/apply", requireAuth, h(async (req, res) => {
-  await pool.query("DELETE FROM applications WHERE user_id = ? AND internship_id = ?", [
-    req.userId, req.params.id,
-  ]);
-  res.json({ applied: false });
-}));
-
-// Job posters manage the internships they posted.
-const internshipFields = (body) => {
-  const company = String(body.company || "").trim();
-  const role = String(body.role || "").trim();
-  const location = String(body.location || "").trim();
-  const url = String(body.url || "").trim() || null;
-  if (!company || !role || !location) return { error: "Company, role and location are required" };
-  if (url && !/^https?:\/\//i.test(url)) return { error: "URL must start with http(s)://" };
-  return { company, role, location, url };
-};
-
-app.post("/api/internships", requireAuth, requirePermission("internships:manage"), h(async (req, res) => {
-  const f = internshipFields(req.body);
-  if (f.error) return res.status(400).json({ error: f.error });
-  const [result] = await pool.query(
-    "INSERT INTO internships (company, role, location, url, source, posted_at, posted_by) VALUES (?, ?, ?, ?, 'manual', NOW(), ?)",
-    [f.company, f.role, f.location, f.url, req.userId],
-  );
-  res.status(201).json({ id: result.insertId, ...f, source: "manual", applied: false, mine: true });
-}));
-
-app.put("/api/internships/:id", requireAuth, requirePermission("internships:manage"), h(async (req, res) => {
-  const f = internshipFields(req.body);
-  if (f.error) return res.status(400).json({ error: f.error });
-  const [result] = await pool.query(
-    "UPDATE internships SET company = ?, role = ?, location = ?, url = ? WHERE id = ? AND posted_by = ?",
-    [f.company, f.role, f.location, f.url, req.params.id, req.userId],
-  );
-  if (!result.affectedRows) return res.status(404).json({ error: "Internship not found, or you didn't post it" });
-  res.json({ id: Number(req.params.id), ...f });
-}));
-
-app.delete("/api/internships/:id", requireAuth, requirePermission("internships:manage"), h(async (req, res) => {
-  await pool.query("DELETE FROM internships WHERE id = ? AND posted_by = ?", [
-    req.params.id, req.userId,
-  ]);
-  res.status(204).end();
-}));
+mountInternships(app);
 
 // ---------- Tracker cards ----------
 const CARD_SELECT = `
   SELECT a.id, a.internship_id, a.title, a.status, a.resume_id, a.cover_letter, a.cover_letter_id,
-         r.file_name AS resume_name, cl.file_name AS cover_letter_name,
-         i.company, i.role, i.description
+         COALESCE(r.file_name, a.resume_file_name) AS resume_name, cl.file_name AS cover_letter_name,
+         i.company, i.role, i.description, i.url AS posting_url,
+         COALESCE(DATE_FORMAT(i.deadline, '%Y-%m-%d'), DATE_FORMAT(a.deadline, '%Y-%m-%d')) AS deadline,
+         DATE_FORMAT(a.remind_on, '%Y-%m-%d') AS remind_on
   FROM applications a
   LEFT JOIN resumes r ON r.id = a.resume_id
   LEFT JOIN resumes cl ON cl.id = a.cover_letter_id
@@ -231,6 +239,9 @@ const toCard = (r) => ({
   company: r.company ?? null,
   role: r.role ?? null,
   description: r.description ?? null,
+  postingUrl: r.posting_url ?? null,
+  deadline: r.deadline ?? null,
+  remindOn: r.remind_on ?? null,
 });
 const MAX_COVER_LETTER = 8000;
 
@@ -241,14 +252,86 @@ app.get("/api/tracker", requireAuth, h(async (req, res) => {
   res.json(rows.map(toCard));
 }));
 
+// ---------- Spreadsheet export / import ----------
+app.get("/api/tracker/export", requireAuth, h(async (req, res) => {
+  const [rows] = await pool.query(
+    `SELECT a.title, a.status, i.company, i.role, COALESCE(r.file_name, a.resume_file_name) AS resume,
+            (a.cover_letter IS NOT NULL OR a.cover_letter_id IS NOT NULL) AS letter,
+            DATE_FORMAT(a.created_at, '%Y-%m-%d') AS applied_on,
+            COALESCE(DATE_FORMAT(i.deadline, '%Y-%m-%d'), DATE_FORMAT(a.deadline, '%Y-%m-%d')) AS deadline,
+            DATE_FORMAT(a.remind_on, '%Y-%m-%d') AS remind_on, i.url
+     FROM applications a
+     LEFT JOIN resumes r ON r.id = a.resume_id
+     LEFT JOIN internships i ON i.id = a.internship_id
+     WHERE a.user_id = ? ORDER BY a.created_at, a.id`,
+    [req.userId],
+  );
+  const csv = toCsv(
+    ["Title", "Company", "Role", "Status", "Applied on", "Deadline", "Remind on", "Resume", "Cover letter", "Link"],
+    rows.map((r) => [r.title, r.company, r.role, r.status, r.applied_on, r.deadline, r.remind_on, r.resume,
+      r.letter ? "Yes" : "No", r.url]),
+    [0, 1, 2, 7, 9], // free-text columns, guarded against spreadsheet formulas
+  );
+  res.set({
+    "Content-Type": "text/csv; charset=utf-8",
+    "Content-Disposition": `attachment; filename="applications-${new Date().toISOString().slice(0, 10)}.csv"`,
+  });
+  res.send(csv);
+}));
+
+// Send the CSV text as the request body. ?dryRun=1 reports what would happen without saving.
+app.post("/api/tracker/import", requireAuth, express.text({ type: ["text/csv", "text/plain"], limit: "1mb" }), h(async (req, res) => {
+  const parsed = normalizeImport(typeof req.body === "string" ? req.body : "");
+  if (parsed.error) return res.status(400).json({ error: parsed.error });
+
+  // Re-importing the same sheet must not double everything up.
+  const [existing] = await pool.query("SELECT LOWER(title) AS t FROM applications WHERE user_id = ?", [req.userId]);
+  const have = new Set(existing.map((r) => r.t));
+  const skipped = [...parsed.skipped];
+  const fresh = [];
+  for (const row of parsed.rows) {
+    if (have.has(row.title.toLowerCase())) skipped.push({ line: row.line, reason: "Already in your tracker" });
+    else fresh.push(row);
+  }
+
+  if (req.query.dryRun !== "1" && fresh.length) {
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      for (const r of fresh) {
+        await conn.query(
+          `INSERT INTO applications (user_id, title, status, deadline, remind_on, created_at)
+           VALUES (?, ?, ?, ?, ?, COALESCE(CONCAT(?, ' 12:00:00'), NOW()))`,
+          [req.userId, r.title, r.status, r.deadline, r.remind_on, r.applied_on],
+        );
+      }
+      await conn.commit();
+    } catch (err) {
+      await conn.rollback().catch(() => {});
+      throw err;
+    } finally {
+      conn.release();
+    }
+  }
+  res.json({
+    added: fresh.length,
+    skipped: skipped.sort((a, b) => a.line - b.line),
+    warnings: parsed.warnings,
+    preview: fresh.slice(0, 8).map(({ title, status, applied_on, deadline }) => ({ title, status, applied_on, deadline })),
+    dryRun: req.query.dryRun === "1",
+  });
+}));
+
 app.post("/api/tracker", requireAuth, h(async (req, res) => {
   const title = String(req.body.title || "").trim();
   const status = req.body.status || "Applied";
   if (!title) return res.status(400).json({ error: "Title is required" });
   if (!STATUSES.includes(status)) return res.status(400).json({ error: "Invalid status" });
   const [result] = await pool.query(
-    `INSERT INTO applications (user_id, title, status, resume_id)
-     VALUES (?, ?, ?, (SELECT id FROM resumes WHERE user_id = ? AND is_current = 1 AND kind = 'resume' LIMIT 1))`,
+    `INSERT INTO applications (user_id, title, status, resume_id, resume_file_name)
+     SELECT ?, ?, ?, r.id, r.file_name
+     FROM (SELECT 1) one
+     LEFT JOIN resumes r ON r.user_id = ? AND r.is_current = 1 AND r.kind = 'resume'`,
     [req.userId, title.slice(0, 255), status, req.userId],
   );
   const [rows] = await pool.query(`${CARD_SELECT} WHERE a.id = ?`, [result.insertId]);
@@ -257,10 +340,11 @@ app.post("/api/tracker", requireAuth, h(async (req, res) => {
 
 // Update a card's status and/or the resume version sent with it.
 app.patch("/api/tracker/:id", requireAuth, h(async (req, res) => {
-  const { status, resumeId, coverLetter, coverLetterId } = req.body;
+  const { status, resumeId, coverLetter, coverLetterId, remindOn } = req.body;
   const sets = [];
   const params = [];
   let statusChanged = false;
+  let resumeFileName = null;
   if (status !== undefined) {
     if (!STATUSES.includes(status)) return res.status(400).json({ error: "Invalid status" });
     const [current] = await pool.query("SELECT status FROM applications WHERE id = ? AND user_id = ?", [
@@ -273,13 +357,14 @@ app.patch("/api/tracker/:id", requireAuth, h(async (req, res) => {
   if (resumeId !== undefined) {
     if (resumeId !== null) {
       const [owned] = await pool.query(
-        "SELECT id FROM resumes WHERE id = ? AND user_id = ? AND kind = 'resume'",
+        "SELECT id, file_name FROM resumes WHERE id = ? AND user_id = ? AND kind = 'resume'",
         [resumeId, req.userId],
       );
       if (!owned.length) return res.status(404).json({ error: "Resume not found" });
+      resumeFileName = owned[0].file_name;
     }
-    sets.push("resume_id = ?");
-    params.push(resumeId);
+    sets.push("resume_id = ?", "resume_file_name = ?");
+    params.push(resumeId, resumeFileName);
   }
   if (coverLetterId !== undefined) {
     if (coverLetterId !== null) {
@@ -299,6 +384,12 @@ app.patch("/api/tracker/:id", requireAuth, h(async (req, res) => {
     sets.push("cover_letter = ?");
     params.push(text.trim() ? text : null);
   }
+  if (remindOn !== undefined) {
+    const date = remindOn === null || remindOn === "" ? null : parseDate(remindOn);
+    if (date === undefined) return res.status(400).json({ error: "Reminder must be a date" });
+    sets.push("remind_on = ?");
+    params.push(date);
+  }
   if (!sets.length) return res.status(400).json({ error: "Nothing to update" });
 
   const [result] = await pool.query(
@@ -311,7 +402,7 @@ app.patch("/api/tracker/:id", requireAuth, h(async (req, res) => {
       req.params.id, req.userId, status,
     ]);
   }
-  res.json({ id: Number(req.params.id), status, resumeId, coverLetter, coverLetterId });
+  res.json({ id: Number(req.params.id), status, resumeId, coverLetter, coverLetterId, remindOn });
 }));
 
 app.delete("/api/tracker/:id", requireAuth, h(async (req, res) => {

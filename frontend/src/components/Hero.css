@@ -104,3 +104,17 @@
     flex: 1 1 100%;
   }
 }
+
+.hero-word {
+  display: inline-block;
+  padding: 0 0.12em;
+  background: linear-gradient(transparent 62%, rgba(242, 201, 76, 0.75) 62%, rgba(242, 201, 76, 0.75) 92%, transparent 92%);
+  animation: hero-word-in 0.45s ease both;
+}
+@keyframes hero-word-in {
+  from { opacity: 0; transform: translateY(0.3em); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-word { animation: none; }
+}

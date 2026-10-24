@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../utils/api";
-import { canPreview, coverLetterApi, resumeApi } from "../utils/resume";
+import { canPreview, coverLetterApi, formatUploadDate, resumeApi, resumeUsage } from "../utils/resume";
 import { loadStudent } from "../utils/student";
 import { Alert, Button, EmptyState, Skeleton } from "../components/ui.jsx";
 import { CoverLetterDialog } from "../components/CoverLetterDialog.jsx";
@@ -132,6 +132,77 @@ function ApplicationRow({ card, resumes, letters, open, onToggle, onAttach, onEd
   );
 }
 
+/** Every resume version, with the companies it was sent to. */
+function ResumeHistory({ resumes, cards, onError }) {
+  const { versions, removed, none: unsent } = resumeUsage(resumes, cards);
+  const guard = (fn) => () => fn().catch((err) => onError(err.message));
+
+  const companies = (list) => (
+    <ul className="rh-sent">
+      {list.map((c) => (
+        <li key={c.id}>
+          <span className="rh-company">{c.title}</span>
+          <span className={`rh-stage app-${c.status.toLowerCase()}`}>
+            <span className="app-dot" aria-hidden="true" />
+            {c.status}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+
+  return (
+    <ol className="rh">
+      {versions.map(({ resume: r, sent }) => {
+        return (
+          <li key={r.id} className="rh-item">
+            <div className="rh-head">
+              <div>
+                <p className="rh-name">
+                  {r.fileName}
+                  {r.current && <span className="resume-badge rh-badge">Current</span>}
+                </p>
+                <p className="rh-meta">
+                  Uploaded {formatUploadDate(r.uploadedAt)} &middot;{" "}
+                  {sent.length === 0
+                    ? "Not sent yet"
+                    : `Sent to ${sent.length} ${sent.length === 1 ? "company" : "companies"}`}
+                </p>
+              </div>
+              <div className="doc-actions">
+                {canPreview(r) && (
+                  <Button variant="ghost" size="sm" onClick={guard(() => resumeApi.view(r))} aria-label={`View ${r.fileName}`}>View</Button>
+                )}
+                <Button variant="ghost" size="sm" onClick={guard(() => resumeApi.download(r))} aria-label={`Download ${r.fileName}`}>Download</Button>
+              </div>
+            </div>
+            {sent.length > 0 && companies(sent)}
+          </li>
+        );
+      })}
+      {removed.map(({ name, sent }) => (
+        <li key={name} className="rh-item rh-item--none">
+          <p className="rh-name">{name}</p>
+          <p className="rh-meta">
+            No longer saved &middot; was sent to {sent.length} {sent.length === 1 ? "company" : "companies"}
+          </p>
+          {companies(sent)}
+        </li>
+      ))}
+      {unsent.length > 0 && (
+        <li className="rh-item rh-item--none">
+          <p className="rh-name">No resume recorded</p>
+          <p className="rh-meta">
+            {unsent.length} {unsent.length === 1 ? "application has" : "applications have"} no resume
+            attached. Pick one under By application below.
+          </p>
+          {companies(unsent)}
+        </li>
+      )}
+    </ol>
+  );
+}
+
 export function Documents() {
   const [cards, setCards] = useState([]);
   const [resumes, setResumes] = useState([]);
@@ -179,6 +250,7 @@ export function Documents() {
     });
   };
 
+  const withoutResume = cards.filter((c) => !c.resumeId).length;
   const shown = cards.filter((c) => stage === "All" || c.status === stage);
 
   return (
@@ -186,13 +258,41 @@ export function Documents() {
       <header className="page-head rise">
         <h1 className="page-title">Documents</h1>
         <p className="page-lede">
-          The resume and cover letter you sent with each application, and the files you can attach.
+          Every resume version you have, and which company each one was sent to.
         </p>
       </header>
 
       <Alert onDismiss={() => setError("")}>{error}</Alert>
 
-      <section className="docs-section rise" style={{ "--i": 1 }} aria-labelledby="docs-by-app">
+      <section className="docs-files rise" aria-label="Your files">
+        <ResumeManager kind="resume" onChange={filesChanged(setResumes)} />
+        <ResumeManager kind="coverLetter" onChange={filesChanged(setLetters)} />
+      </section>
+
+      {!loading && (
+        <dl className="docs-summary rise">
+          <div><dt>Resume versions</dt><dd>{resumes.length}</dd></div>
+          <div><dt>Applications</dt><dd>{cards.length}</dd></div>
+          <div className={withoutResume ? "docs-summary--warn" : undefined}>
+            <dt>Without a resume</dt><dd>{withoutResume}</dd>
+          </div>
+        </dl>
+      )}
+
+      <section className="docs-section rise" style={{ "--i": 1 }} aria-labelledby="docs-by-resume">
+        <div className="docs-bar">
+          <h2 id="docs-by-resume" className="docs-h">Resume versions</h2>
+        </div>
+        {loading ? (
+          <Skeleton height="64px" style={{ borderRadius: 10 }} />
+        ) : cards.length === 0 && resumes.length === 0 ? (
+          <p className="docs-none">Upload a resume above, then apply to roles to see where each version goes.</p>
+        ) : (
+          <ResumeHistory resumes={resumes} cards={cards} onError={setError} />
+        )}
+      </section>
+
+      <section className="docs-section rise" style={{ "--i": 2 }} aria-labelledby="docs-by-app">
         <div className="docs-bar">
           <h2 id="docs-by-app" className="docs-h">By application</h2>
           <div className="docs-filter" role="group" aria-label="Filter by stage">
@@ -241,11 +341,6 @@ export function Documents() {
             ))}
           </ul>
         )}
-      </section>
-
-      <section className="docs-files" aria-label="Your files">
-        <ResumeManager kind="resume" onChange={filesChanged(setResumes)} />
-        <ResumeManager kind="coverLetter" onChange={filesChanged(setLetters)} />
       </section>
 
       <CoverLetterDialog

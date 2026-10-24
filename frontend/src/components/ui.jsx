@@ -55,6 +55,33 @@ export function Field({ label, id, className, hint, multiline, ...input }) {
   );
 }
 
+/** A labelled <select>. `options` are strings, or { value, label }. */
+export function Select({ label, id, className, hint, options, placeholder, ...input }) {
+  return (
+    <div className={cx("field", className)}>
+      <label className="field-label" htmlFor={id}>
+        {label}
+      </label>
+      <select id={id} className="field-input" aria-describedby={hint ? `${id}-hint` : undefined} {...input}>
+        {placeholder !== undefined && <option value="">{placeholder}</option>}
+        {options.map((o) => {
+          const { value, label: text } = typeof o === "string" ? { value: o, label: o } : o;
+          return (
+            <option key={value} value={value}>
+              {text}
+            </option>
+          );
+        })}
+      </select>
+      {hint && (
+        <span className="field-hint" id={`${id}-hint`}>
+          {hint}
+        </span>
+      )}
+    </div>
+  );
+}
+
 export function Alert({ children, onDismiss }) {
   if (!children) return null;
   return (
@@ -109,5 +136,70 @@ export function ConfirmDialog({ open, title, children, confirmLabel = "Confirm",
         <Button variant="danger" loading={busy} disabled={confirmDisabled} onClick={onConfirm}>{confirmLabel}</Button>
       </div>
     </dialog>
+  );
+}
+
+/** A popup for reading or editing, not for confirming. Esc, the × button and a click outside all close it. */
+export function Modal({ open, title, onClose, children }) {
+  const ref = useRef(null);
+  const titleId = useId();
+
+  useEffect(() => {
+    const dialog = ref.current;
+    if (!dialog) return;
+    if (open && !dialog.open) dialog.showModal();
+    if (!open && dialog.open) dialog.close();
+  }, [open]);
+
+  return (
+    <dialog
+      ref={ref}
+      className="dialog-ui modal-ui"
+      aria-labelledby={titleId}
+      onCancel={(e) => { e.preventDefault(); onClose(); }}
+      onClick={(e) => { if (e.target === ref.current) onClose(); }}
+    >
+      <div className="modal-ui-inner">
+        <header className="modal-ui-head">
+          <h2 id={titleId}>{title}</h2>
+          <button type="button" className="modal-ui-close" onClick={onClose} aria-label="Close">
+            ×
+          </button>
+        </header>
+        {open && children}
+      </div>
+    </dialog>
+  );
+}
+
+/** Previous / numbered / next. Renders nothing when there is only one page. */
+export function Pagination({ page, pages, onChange }) {
+  if (pages <= 1) return null;
+  const shown = [...new Set([1, page - 1, page, page + 1, pages])].filter((n) => n >= 1 && n <= pages).sort((a, b) => a - b);
+  return (
+    <nav className="pager" aria-label="Pages">
+      <Button variant="ghost" size="sm" disabled={page <= 1} onClick={() => onChange(page - 1)}>
+        Previous
+      </Button>
+      <ul className="pager-list">
+        {shown.map((n, i) => (
+          <li key={n}>
+            {i > 0 && n - shown[i - 1] > 1 && <span className="pager-gap" aria-hidden="true">…</span>}
+            <button
+              type="button"
+              className="pager-num"
+              aria-current={n === page ? "page" : undefined}
+              aria-label={`Page ${n}`}
+              onClick={() => onChange(n)}
+            >
+              {n}
+            </button>
+          </li>
+        ))}
+      </ul>
+      <Button variant="ghost" size="sm" disabled={page >= pages} onClick={() => onChange(page + 1)}>
+        Next
+      </Button>
+    </nav>
   );
 }

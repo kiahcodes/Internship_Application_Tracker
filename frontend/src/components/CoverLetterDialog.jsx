@@ -17,6 +17,7 @@ export function CoverLetterDialog({ card, student, onSaved, onClose }) {
   const [error, setError] = useState("");
   const [note, setNote] = useState("");
   const [discardArmed, setDiscardArmed] = useState(false);
+  const [replaceArmed, setReplaceArmed] = useState(false);
 
   const saved = card?.coverLetter ?? "";
   const dirty = text !== saved;
@@ -30,6 +31,7 @@ export function CoverLetterDialog({ card, student, onSaved, onClose }) {
       setError("");
       setNote("");
       setDiscardArmed(false);
+      setReplaceArmed(false);
       dialog.showModal();
     }
     if (!card && dialog.open) dialog.close();
@@ -44,9 +46,13 @@ export function CoverLetterDialog({ card, student, onSaved, onClose }) {
   };
 
   const useTemplate = () => {
-    if (text.trim() && !window.confirm("Replace what you've written with a fresh draft?")) return;
+    if (text.trim() && !replaceArmed) {
+      setReplaceArmed(true); // first press warns, second replaces
+      return;
+    }
     setText(draftCoverLetter(card, student));
     setDiscardArmed(false);
+    setReplaceArmed(false);
   };
 
   const save = async () => {
@@ -133,7 +139,7 @@ export function CoverLetterDialog({ card, student, onSaved, onClose }) {
       <div className="cl-actions">
         <div className="cl-tools">
           <Button variant="ghost" size="sm" onClick={useTemplate}>
-            {hasText ? "Start a new draft" : "Start from a draft"}
+            {replaceArmed ? "Replace my text?" : hasText ? "Start a new draft" : "Start from a draft"}
           </Button>
           <Button variant="ghost" size="sm" onClick={copy} disabled={!hasText}>Copy</Button>
           <Button variant="ghost" size="sm" onClick={download} disabled={!hasText}>Download .txt</Button>

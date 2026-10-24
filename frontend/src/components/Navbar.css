@@ -78,7 +78,7 @@
   align-items: center;
   min-height: 40px;
   border: none;
-  background: var(--c2c-green);
+  background: linear-gradient(135deg, #17803a, var(--c2c-green) 55%, var(--c2c-green-deep));
   color: #fff;
   font: inherit;
   font-size: 0.9rem;

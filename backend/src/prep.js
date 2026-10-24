@@ -2,6 +2,7 @@
 // with a simple spaced-repetition quiz. Everything is scoped to the signed-in user.
 import { pool } from "./db.js";
 import { requireAuth } from "./auth.js";
+import { WINDOWS, companyProblems } from "./leetcode.js";
 
 export const ROUND_TYPES = ["OA", "Technical", "System design", "Behavioral", "HR", "Managerial", "Other"];
 export const LINK_KINDS = ["dsa", "notes", "other"];
@@ -118,6 +119,26 @@ export function mountPrep(app) {
       rounds: rounds.map(toRound),
       questions: questions.map(toQuestion),
     });
+  }));
+
+  // LeetCode problems other candidates were asked at this company (see leetcode.js).
+  app.get("/api/prep/companies/:id/leetcode", auth, wrap(async (req, res) => {
+    const [[company]] = await pool.query("SELECT id, name FROM prep_companies WHERE id = ? AND user_id = ?", [
+      req.params.id, req.userId,
+    ]).then(([r]) => [r]);
+    if (!company) return fail(res, 404, "Company not found");
+    const window = WINDOWS.includes(req.query.window) ? req.query.window : "all";
+    let problems;
+    try {
+      problems = await companyProblems(company.name, window);
+    } catch (err) {
+      console.error("LeetCode list failed:", err.message);
+      return fail(res, 502, "Couldn't load the question list right now. Try again in a minute.");
+    }
+    if (!problems) return res.json({ available: false, window, problems: [] });
+    const [saved] = await pool.query("SELECT url FROM prep_links WHERE company_id = ? AND user_id = ?", [company.id, req.userId]);
+    const have = new Set(saved.map((l) => l.url));
+    res.json({ available: true, window, problems: problems.map((p) => ({ ...p, saved: have.has(p.url) })) });
   }));
 
   // ---------- Checklist ----------

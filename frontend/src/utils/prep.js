@@ -8,6 +8,14 @@ export const LINK_KINDS = [
   { value: "other", label: "Other", group: "Other" },
 ];
 
+export const LC_WINDOWS = [
+  { value: "thirty-days", label: "Last 30 days" },
+  { value: "three-months", label: "Last 3 months" },
+  { value: "six-months", label: "Last 6 months" },
+  { value: "more-than-six-months", label: "Older than 6 months" },
+  { value: "all", label: "All time" },
+];
+
 // Offered when a company has no checklist yet. Edit freely once added.
 export const STARTER_ITEMS = [
   "Read the job description and note the skills it asks for",
@@ -27,6 +35,8 @@ export const prep = {
   addCompany: (name) => send("/prep/companies", "POST", { name }),
   deleteCompany: (id) => send(`/prep/companies/${id}`, "DELETE"),
   company: (id) => api(`/prep/companies/${id}`),
+
+  leetcode: (id, window) => api(`/prep/companies/${id}/leetcode?window=${window}`),
 
   addItem: (companyId, text) => send("/prep/items", "POST", { companyId, text }),
   setItem: (id, patch) => send(`/prep/items/${id}`, "PATCH", patch),

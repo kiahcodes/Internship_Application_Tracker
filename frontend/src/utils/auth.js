@@ -28,7 +28,7 @@ async function authRequest(path, body) {
       body: JSON.stringify(body),
     });
   } catch {
-    throw new Error("Can't reach the server. Is the backend running?");
+    throw new Error("Can't reach the server right now. Please check your connection and try again.");
   }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || "Something went wrong");
@@ -38,8 +38,27 @@ async function authRequest(path, body) {
 export const login = ({ email, password }) =>
   authRequest("login", { email, password });
 
-export const signup = ({ name, email, password, role }) =>
-  authRequest("signup", { name, email, password, role });
+export const signup = ({ name, email, password, role, inviteCode }) =>
+  authRequest("signup", { name, email, password, role, inviteCode });
+
+// These two don't sign you in, so they skip authRequest's session saving.
+async function plainRequest(path, body) {
+  let res;
+  try {
+    res = await fetch(`/api/auth/${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    throw new Error("Can't reach the server right now. Please check your connection and try again.");
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || "Something went wrong");
+}
+
+export const requestPasswordReset = (email) => plainRequest("forgot", { email });
+export const resetPassword = ({ token, password }) => plainRequest("reset", { token, password });
 
 export function setSessionName(name) {
   const session = loadSession();

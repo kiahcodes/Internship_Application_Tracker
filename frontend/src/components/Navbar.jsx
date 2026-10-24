@@ -15,7 +15,7 @@ export function Navbar() {
   return (
     <nav className="custom-navbar">
       <NavLink to="/" className="logo" onClick={closeMenu}>
-        <img src={logo} alt="logo" className="logo-img" />
+        <img src={logo} alt="" className="logo-img" />
         Campus2Career
       </NavLink>
 
@@ -44,7 +44,7 @@ export function Navbar() {
               </NavLink>
             </li>
             <li>
-              <NavLink to="/drag-drop" onClick={closeMenu}>
+              <NavLink to="/tracker" onClick={closeMenu}>
                 Tracker
               </NavLink>
             </li>

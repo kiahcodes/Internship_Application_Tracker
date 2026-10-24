@@ -15,6 +15,15 @@ function splitTitle(title) {
     : { role: title, company: "" };
 }
 
+// Phone and email, then profile links, so the reader can reach the applicant.
+function contactLines(student) {
+  if (!student) return [];
+  return [
+    [student.phone, student.email].filter(Boolean).join(" · "),
+    [student.linkedin, student.github, student.portfolio].filter(Boolean).join(" · "),
+  ].filter(Boolean);
+}
+
 /**
  * A starting draft, not a finished letter. Anything the app can't know (your own
  * projects, why you want this company) is left as a [bracketed placeholder].
@@ -30,7 +39,9 @@ export function draftCoverLetter(card, student) {
     description: card.description,
   });
 
-  const intro = `I'm ${name}${student?.course ? `, a ${student.course} student` : ""}, and I'm applying for the ${role} position${company ? ` at ${company}` : ""}.`;
+  const course = student?.course ? `${student.course}${student.branch ? ` (${student.branch})` : ""}` : "";
+  const education = course ? `, a ${course} student${student.grad_year ? ` graduating in ${student.grad_year}` : ""}` : "";
+  const intro = `I'm ${name}${education}, and I'm applying for the ${role} position${company ? ` at ${company}` : ""}.`;
   const fit = matched.length
     ? ` My skills in ${joinList(matched)} match what the role asks for.`
     : "";
@@ -41,7 +52,7 @@ export function draftCoverLetter(card, student) {
     "[Describe one project or experience that shows you can do this work: what you built, which tools you used, and the result.]",
     `[Say why ${company ? company : "this company"} or this role interests you.]`,
     "I've attached my resume and would welcome the chance to talk. Thank you for your time.",
-    `Sincerely,\n${name}`,
+    [`Sincerely,\n${name}`, ...contactLines(student)].join("\n"),
   ].join("\n\n");
 }
 

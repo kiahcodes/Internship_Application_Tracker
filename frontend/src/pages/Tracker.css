@@ -15,7 +15,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 1rem;
-  align-items: start;
+  align-items: stretch;
 }
 
 .dd-column {
@@ -26,7 +26,9 @@
   border-top: 4px solid var(--accent);
   border-radius: var(--radius-md);
   padding: 1rem;
+  height: 70vh;
   min-height: 280px;
+  max-height: 640px;
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
@@ -47,6 +49,19 @@
 .dd-offer {
   --accent: var(--stage-offer);
   --tint: var(--stage-offer-tint);
+}
+.dd-cards {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 2px 4px 2px 2px;
+  margin-right: -4px;
+}
+.dd-cards > * {
+  flex-shrink: 0;
 }
 .dd-column h2 {
   display: flex;
@@ -198,8 +213,13 @@
   .dd-board {
     grid-template-columns: 1fr;
   }
+  .dd-cards {
+    max-height: 60vh;
+  }
   .dd-column {
+    height: auto;
     min-height: 0;
+    max-height: none;
   }
 }
 @media (max-width: 480px) {
@@ -282,4 +302,109 @@
   border-color: transparent;
   background: var(--c2c-green-tint);
   color: var(--c2c-green-deep);
+}
+
+.dd-sheet-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.dd-coming {
+  max-width: 1100px;
+  margin: 0 auto 1.5rem;
+  padding: 1rem 1.25rem;
+  background: var(--c2c-surface);
+  border: 1px solid var(--c2c-line);
+  border-left: 4px solid var(--stage-oa, #b7791f);
+  border-radius: var(--radius-md);
+}
+.dd-coming h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+.dd-coming ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.dd-coming li {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.9rem;
+}
+.dd-coming-title {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.dd-coming-when {
+  color: var(--c2c-ink-soft);
+  font-size: 0.9rem;
+}
+.dd-coming li.is-soon .dd-coming-when {
+  color: #8a5a00;
+  font-weight: 600;
+}
+.dd-coming li.is-overdue .dd-coming-when {
+  color: var(--c2c-danger);
+  font-weight: 600;
+}
+.dd-deadline {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--c2c-ink-soft);
+}
+.dd-deadline.tone-urgent {
+  color: var(--c2c-danger);
+}
+.dd-deadline.tone-soon {
+  color: #8a5a00;
+}
+
+.imp-lede {
+  margin: 0 0 1rem;
+}
+.imp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+.imp-table th,
+.imp-table td {
+  padding: 0.45rem 0.6rem;
+  text-align: left;
+  border-bottom: 1px solid var(--c2c-line);
+}
+.imp-table th {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--c2c-ink-soft);
+}
+.imp-more {
+  margin: 0.5rem 0 0;
+  color: var(--c2c-ink-soft);
+  font-size: 0.9rem;
+}
+.imp-details {
+  margin-top: 0.9rem;
+  font-size: 0.9rem;
+}
+.imp-details summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.imp-details ul {
+  margin: 0.4rem 0 0;
+  padding-left: 1.1rem;
+  max-height: 10rem;
+  overflow-y: auto;
+}
+.imp-actions {
+  margin-top: 1.25rem;
 }

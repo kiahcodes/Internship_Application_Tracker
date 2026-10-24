@@ -5,7 +5,18 @@ import { loadStudent } from "../utils/student";
 import { Button } from "./ui.jsx";
 import "./Hero.css";
 
+const WORDS = ["application", "interview", "offer", "deadline"];
+const reducedMotion = () =>
+  window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
 export const Hero = () => {
+  const [wordIdx, setWordIdx] = useState(0);
+  useEffect(() => {
+    if (reducedMotion()) return;
+    const id = setInterval(() => setWordIdx((i) => (i + 1) % WORDS.length), 2400);
+    return () => clearInterval(id);
+  }, []);
+
   const signedIn = isAuthenticated();
   const [name, setName] = useState(() => loadSession()?.name || "");
   const firstName = name.split(" ")[0];
@@ -24,15 +35,19 @@ export const Hero = () => {
           {firstName ? `Welcome back, ${firstName}.` : "Welcome back."}
         </p>
       )}
-      <h1 className="hero-title">Know where every application stands.</h1>
+      <h1 className="hero-title">
+        Know where every{" "}
+        <span key={WORDS[wordIdx]} className="hero-word">{WORDS[wordIdx]}</span>{" "}
+        stands.
+      </h1>
       <p className="hero-lede">
-        Find internships near you and keep every application in one place.
+        Track which resume went to which company, and where every application stands.
       </p>
       <div className="hero-actions">
         {signedIn ? (
           <>
             <Button as={Link} to="/internships">Browse internships</Button>
-            <Button as={Link} to="/drag-drop" variant="ghost">Open your tracker</Button>
+            <Button as={Link} to="/tracker" variant="ghost">Open your tracker</Button>
           </>
         ) : (
           <>

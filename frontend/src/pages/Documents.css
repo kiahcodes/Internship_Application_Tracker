@@ -200,10 +200,20 @@
 }
 
 .docs-files {
-  display: flex;
-  flex-direction: column;
-  gap: 2.5rem;
-  margin-top: 3rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+  align-items: start;
+  max-width: 1100px;
+  margin: 0 auto 2rem;
+}
+.docs-files > .resume {
+  min-width: 0;
+  margin: 0;
+  max-width: none;
+}
+@media (max-width: 860px) {
+  .docs-files { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 760px) {
@@ -231,4 +241,120 @@
   .app-panel {
     grid-template-columns: 1fr;
   }
+}
+
+/* ---------- Resume versions ---------- */
+.docs-section + .docs-section {
+  margin-top: 2.5rem;
+}
+.rh {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+.rh-item {
+  padding: 1rem 1.25rem;
+  background: var(--c2c-surface);
+  border: 1px solid var(--c2c-line);
+  border-radius: 10px;
+  box-shadow: var(--shadow-sm);
+}
+.rh-item--none {
+  border-style: dashed;
+  box-shadow: none;
+}
+.rh-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.rh-name {
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.rh-badge {
+  margin-left: 0.5rem;
+}
+.rh-meta {
+  margin: 0.2rem 0 0;
+  font-size: 0.85rem;
+  color: var(--c2c-ink-soft);
+}
+.rh-sent {
+  --accent: var(--stage-applied);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.8rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+.rh-sent li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.3rem 0.7rem;
+  background: var(--c2c-cream);
+  border-radius: 999px;
+  font-size: 0.85rem;
+}
+.rh-company {
+  font-weight: 600;
+}
+.rh-stage {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+/* ---------- Summary + grid ---------- */
+.docs-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  max-width: 1100px;
+  margin: 0 auto 2rem;
+  padding: 0;
+}
+.docs-summary > div {
+  flex: 1 1 10rem;
+  padding: 1rem 1.25rem;
+  background: var(--c2c-surface);
+  border: 1px solid var(--c2c-line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+.docs-summary dt { font-size: 0.82rem; font-weight: 600; color: var(--c2c-ink-soft); }
+.docs-summary dd {
+  margin: 0.2rem 0 0;
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  color: var(--c2c-green-deep);
+}
+.docs-summary .docs-summary--warn dd { color: var(--stage-rejected); }
+
+
+/* Upload panels sit at the top as two cards, so changing a file never needs a scroll. */
+.docs-files > .resume {
+  padding: 1.25rem 1.4rem;
+  background: var(--c2c-surface);
+  border: 1px solid var(--c2c-line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+.docs-files .resume-title { font-size: 1.25rem; }
+.docs-files .resume-history-list {
+  max-height: 14rem;
+  overflow-y: auto;
 }
