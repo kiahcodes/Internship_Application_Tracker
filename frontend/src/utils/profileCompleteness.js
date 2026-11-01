@@ -13,13 +13,15 @@ export const CHECKLIST = [
   ["github", "GitHub"],
   ["linkedin", "LinkedIn"],
   ["portfolio", "portfolio"],
+  ["projects", "projects"],
   ["google_scholar", "Google Scholar"],
   ["orcid", "ORCID"],
   ["codeforces", "Codeforces"],
   ["leetcode", "LeetCode"],
 ];
 
-export const hasValue = (v) => v !== null && v !== undefined && String(v).trim() !== "";
+export const hasValue = (v) =>
+  Array.isArray(v) ? v.length > 0 : v !== null && v !== undefined && String(v).trim() !== "";
 
 export function completeness(profile) {
   const missing = CHECKLIST.filter(([key]) => !hasValue(profile?.[key]));

@@ -34,16 +34,19 @@
   border-radius: 2px;
 }
 .nav-auth-btn {
-  background: var(--brand-gradient);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 2px 8px rgba(14, 104, 24, 0.25);
+  background: var(--c2c-green);
+  box-shadow: none;
 }
 .nav-auth-btn:hover {
-  background: var(--brand-gradient-dark);
+  background: var(--c2c-green-deep);
 }
 
 /* ---------- Primary action ---------- */
 .btn-ui--primary {
-  background: var(--brand-gradient);
+  background: var(--c2c-green);
+}
+.btn-ui--primary:hover:not(:disabled) {
+  background: var(--c2c-green-deep);
 }
 
 /* ---------- Surfaces ---------- */
@@ -96,7 +99,7 @@
 /* ---------- Selected states ---------- */
 .seg-btn--on,
 .docs-chip--on {
-  background: var(--brand-gradient);
+  background: var(--c2c-green);
   border-color: transparent;
   color: #fff;
 }
@@ -168,7 +171,7 @@
   color: #fff;
 }
 .btn-ui--soft {
-  background: linear-gradient(180deg, #eef7ef, var(--c2c-green-tint));
+  background: var(--c2c-green-tint);
 }
 .p-chips li {
   background: linear-gradient(180deg, #fff, var(--c2c-green-tint));
@@ -213,7 +216,7 @@
   box-shadow: 0 0 0 3px var(--c2c-surface), 0 8px 20px rgba(14, 104, 24, 0.25);
 }
 .resume-badge {
-  background: linear-gradient(90deg, #fbe9a8, var(--gold));
+  background: var(--gold);
   color: #3a2706;
 }
 .pr-tab--on {

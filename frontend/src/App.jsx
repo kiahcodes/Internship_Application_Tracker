@@ -1,4 +1,6 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { useEffect } from "react";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { initAnalytics, trackPage } from "./utils/analytics.js";
 import { ProtectedRoute } from "./components/ProtectedRoute.jsx";
 import { Navbar } from "./components/Navbar.jsx";
 import { Home } from "./pages/Home.jsx";
@@ -18,6 +20,9 @@ import { NotFound } from "./pages/NotFound.jsx";
 import "./App.css";
 
 function App() {
+  const { pathname } = useLocation();
+  useEffect(initAnalytics, []);
+  useEffect(() => trackPage(pathname), [pathname]);
   return (
     <main className="main">
       <Navbar />

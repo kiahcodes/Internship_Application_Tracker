@@ -21,6 +21,27 @@ function cleanUrl(raw, label) {
  * already stored (e.g. a free-text course from before these became choices) may be kept as-is,
  * so old accounts can still save other changes.
  */
+export const MAX_PROJECTS = 8;
+
+/** Validates the projects list. Blank rows are dropped; returns { projects } or { error }. */
+export function cleanProjects(raw) {
+  if (!Array.isArray(raw)) return { error: "Projects must be a list" };
+  const projects = [];
+  for (const p of raw) {
+    const name = String(p?.name ?? "").trim();
+    const description = String(p?.description ?? "").trim();
+    if (!name && !String(p?.url ?? "").trim() && !description) continue;
+    if (!name) return { error: "Every project needs a name" };
+    if (name.length > 100) return { error: "A project name is too long (100 characters max)" };
+    if (description.length > 300) return { error: `The description for "${name}" is too long (300 characters max)` };
+    const url = cleanUrl(p?.url, `The link for "${name}"`);
+    if (url.error) return { error: url.error };
+    projects.push({ name, url: url.value, description });
+  }
+  if (projects.length > MAX_PROJECTS) return { error: `You can list up to ${MAX_PROJECTS} projects` };
+  return { projects };
+}
+
 export function cleanProfile(body, current = {}) {
   const choice = (key, label, allowed) => {
     const v = String(body[key] ?? "").trim();

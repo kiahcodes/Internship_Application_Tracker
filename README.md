@@ -54,7 +54,7 @@ Built as a full-stack project: a **React + Vite** frontend, an **Express** API, 
 - Email + password, or **Google / GitHub** sign-in. Sign in with either your email **or your username**.
 - Every user has a **unique username** (your public handle).
 - Password reset by one-time link (30 minutes, single use). Show/hide password toggle on every password field.
-- Rich profile: education, CGPA, skills, preferred locations, and links to **GitHub, LinkedIn, portfolio, LeetCode, Codeforces, Google Scholar and ORCID**.
+- Rich profile: education, CGPA, skills, preferred locations, and links to **GitHub, LinkedIn, portfolio, LeetCode, Codeforces, Google Scholar and ORCID**, and a list of your **projects** (name, link, short description).
 - A **profile-completeness bar** under the navbar shows how much of your profile is filled in.
 - Two roles: **student** and **poster** (can post and manage internships; sign-up needs an invite code).
 - Delete your account (password required) — your data and stored files go with it.
@@ -165,6 +165,7 @@ Open **http://localhost:5173**, sign up, and you're in. Without `SMTP_URL`, pass
 |---|---|---|
 | `VITE_SUPABASE_URL` | for social login | Same as `SUPABASE_URL` |
 | `VITE_SUPABASE_ANON_KEY` | for social login | The public `anon` key (safe to expose) |
+| `VITE_GA_MEASUREMENT_ID` | no | Google Analytics 4 ID (`G-XXXXXXXXXX`). Empty means no tracking |
 
 ---
 

@@ -118,3 +118,6 @@
 @media (prefers-reduced-motion: reduce) {
   .hero-word { animation: none; }
 }
+
+.hero-proof { margin: 1.25rem 0 0; font-size: 0.95rem; color: var(--c2c-ink-soft); }
+.hero-proof b { color: var(--c2c-green); font-size: 1.1rem; font-variant-numeric: tabular-nums; }

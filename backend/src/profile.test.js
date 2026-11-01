@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { cleanProfile } from "./profile.js";
+import { cleanProfile, cleanProjects } from "./profile.js";
 
 test("accepts a full, valid profile and tidies links", () => {
   const { values, error } = cleanProfile({
@@ -33,4 +33,13 @@ test("a stored legacy value can be kept so other edits still save", () => {
   const out = cleanProfile({ course: "Full Stack Development", semester: "5th" }, { course: "Full Stack Development", semester: "5th" });
   assert.equal(out.error, undefined);
   assert.equal(out.values.course, "Full Stack Development");
+});
+
+test("projects: blank rows are dropped, links tidied, bad input rejected", () => {
+  const ok = cleanProjects([{ name: " Tracker ", url: "github.com/me/tracker", description: "Job board" }, { name: "", url: "" }]);
+  assert.deepEqual(ok.projects, [{ name: "Tracker", url: "https://github.com/me/tracker", description: "Job board" }]);
+  assert.match(cleanProjects([{ name: "", url: "x.com" }]).error, /needs a name/);
+  assert.match(cleanProjects([{ name: "A", url: "nope" }]).error, /doesn't look like a link/);
+  assert.match(cleanProjects(Array.from({ length: 9 }, (_, i) => ({ name: `p${i}` }))).error, /up to 8/);
+  assert.ok(cleanProjects("x").error);
 });

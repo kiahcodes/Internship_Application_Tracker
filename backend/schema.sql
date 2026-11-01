@@ -152,6 +152,18 @@ CREATE TABLE IF NOT EXISTS prep_items (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Projects shown on the profile: a name, a link and a short description.
+CREATE TABLE IF NOT EXISTS profile_projects (
+  id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name VARCHAR(100) NOT NULL,
+  url VARCHAR(200) NOT NULL DEFAULT '',
+  description VARCHAR(300) NOT NULL DEFAULT '',
+  position SMALLINT NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_profile_projects_user ON profile_projects (user_id, position);
+
 -- Links to DSA problems, notes or anything else useful for one company.
 CREATE TABLE IF NOT EXISTS prep_links (
   id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -196,6 +208,7 @@ ALTER TABLE resumes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE internships ENABLE ROW LEVEL SECURITY;
 ALTER TABLE applications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE application_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE profile_projects ENABLE ROW LEVEL SECURITY;
 ALTER TABLE prep_companies ENABLE ROW LEVEL SECURITY;
 ALTER TABLE prep_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE prep_links ENABLE ROW LEVEL SECURITY;

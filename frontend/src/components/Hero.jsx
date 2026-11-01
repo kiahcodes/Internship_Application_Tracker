@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { isAuthenticated, loadSession } from "../utils/auth";
 import { loadStudent } from "../utils/student";
+import { api } from "../utils/api";
 import { Button } from "./ui.jsx";
 import "./Hero.css";
 
+const MIN_SHOWN = 10;
 const WORDS = ["application", "interview", "offer", "deadline"];
 const reducedMotion = () =>
   window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
@@ -30,6 +32,14 @@ export const Hero = () => {
       .then((student) => setName(student.name))
       .catch(() => {});
   }, [signedIn]);
+
+  // Signup count shown to everyone. Hidden while it's small, since a tiny number doesn't persuade.
+  const [students, setStudents] = useState(0);
+  useEffect(() => {
+    api("/stats")
+      .then((s) => setStudents(s.students))
+      .catch(() => {});
+  }, []);
 
   return (
     <section className="hero">
@@ -70,6 +80,12 @@ export const Hero = () => {
           </>
         )}
       </div>
+      {students >= MIN_SHOWN && (
+        <p className="hero-proof">
+          <b>{students.toLocaleString("en-IN")}</b> users already track their
+          applications here.
+        </p>
+      )}
     </section>
   );
 };

@@ -140,6 +140,8 @@
   overflow: hidden;
 }
 .p-bar span {
+  position: relative;
+  overflow: hidden;
   display: block;
   height: 100%;
   border-radius: inherit;
@@ -357,4 +359,33 @@
     flex-direction: column;
     align-items: stretch;
   }
+}
+
+/* ---------- Projects ---------- */
+.p-projects, .p-projects-edit { list-style: none; margin: 0; padding: 0; display: grid; gap: 1rem; }
+.p-projects li { padding-bottom: 0.9rem; border-bottom: 1px solid var(--c2c-line); }
+.p-projects li:last-child { padding-bottom: 0; border-bottom: 0; }
+.p-projects h3 { margin: 0; font-size: 1.05rem; font-weight: 600; }
+.p-projects h3 a { color: var(--c2c-green); text-decoration: none; }
+.p-projects h3 a:hover { text-decoration: underline; }
+.p-projects p { margin: 0.3rem 0 0; line-height: 1.5; color: var(--c2c-ink-soft); }
+.p-project-host { display: block; margin-top: 0.3rem; font-size: 0.8rem; color: var(--c2c-ink-soft); overflow-wrap: anywhere; }
+.p-project-edit { display: grid; gap: 0.7rem; padding: 1rem; border: 1px solid var(--c2c-line); border-radius: 12px; background: var(--c2c-cream); }
+.p-project-remove { justify-self: start; }
+
+/* A soft highlight that sweeps along the filled part of the bar. */
+@keyframes bar-shine {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(260%); }
+}
+.p-bar span::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 60%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.65), transparent);
+  animation: bar-shine 2.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .p-bar span::after { animation: none; display: none; }
 }

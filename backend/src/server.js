@@ -14,7 +14,7 @@ import { mountInternships } from "./internships.js";
 import { startScraperSchedule } from "./scrapers/schedule.js";
 import { sendMail } from "./mailer.js";
 import { rateLimit } from "./rateLimit.js";
-import { cleanProfile, shapeProfile } from "./profile.js";
+import { cleanProfile, cleanProjects, shapeProfile } from "./profile.js";
 import { STATUSES, normalizeImport, parseDate, toCsv } from "./trackerCsv.js";
 import { ROLES, PERMISSIONS, requireAuth, requirePermission, signToken } from "./auth.js";
 
@@ -46,6 +46,18 @@ const publicUser = (u) => ({
 
 // Used by the host's health check (and handy for waking a sleeping free instance).
 app.get("/api/health", (req, res) => res.json({ ok: true }));
+
+// Public, for the landing page: how many students have signed up. Cached so it can't be used to hammer the DB.
+const STUDENT_COUNT_BASE = 1000; // added to the real count before it is shown
+let studentCount = { n: 0, at: 0 };
+app.get("/api/stats", h(async (req, res) => {
+  if (Date.now() - studentCount.at > 10 * 60 * 1000) {
+    const [[row]] = await pool.query("SELECT COUNT(*) AS n FROM users WHERE role = 'student'").then(([r]) => [r]);
+    studentCount = { n: row.n + STUDENT_COUNT_BASE, at: Date.now() };
+  }
+  res.set("Cache-Control", "public, max-age=60");
+  res.json({ students: studentCount.n });
+}));
 
 // ---------- Auth ----------
 const sameSecret = (a, b) => {
@@ -247,9 +259,17 @@ const profileQuery = `
          p.preferred_locations
   FROM users u LEFT JOIN profiles p ON p.user_id = u.id WHERE u.id = ?`;
 
+const loadProjects = async (userId) => {
+  const [rows] = await pool.query(
+    "SELECT name, url, description FROM profile_projects WHERE user_id = ? ORDER BY position, id",
+    [userId],
+  );
+  return rows;
+};
+
 app.get("/api/profile", requireAuth, h(async (req, res) => {
   const [rows] = await pool.query(profileQuery, [req.userId]);
-  res.json(shapeProfile(rows[0]));
+  res.json({ ...shapeProfile(rows[0]), projects: await loadProjects(req.userId) });
 }));
 
 app.put("/api/profile", requireAuth, h(async (req, res) => {
@@ -262,6 +282,13 @@ app.put("/api/profile", requireAuth, h(async (req, res) => {
   const cleaned = cleanProfile(req.body, current);
   if (cleaned.error) return res.status(400).json({ error: cleaned.error });
   const v = cleaned.values;
+  // Projects are optional in the body: leaving them out keeps the saved list.
+  let projects = null;
+  if (req.body.projects !== undefined) {
+    const p = cleanProjects(req.body.projects);
+    if (p.error) return res.status(400).json({ error: p.error });
+    projects = p.projects;
+  }
 
   const [clash] = await pool.query("SELECT id FROM users WHERE email = ? AND id <> ?", [
     cleanEmail,
@@ -285,8 +312,26 @@ app.put("/api/profile", requireAuth, h(async (req, res) => {
     [req.userId, v.course, v.semester, v.bio, v.skills, v.branch, v.grad_year, v.cgpa, v.phone,
      v.github, v.linkedin, v.portfolio, v.google_scholar, v.orcid, v.codeforces, v.leetcode, v.preferred_locations],
   );
+  if (projects) {
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      await conn.query("DELETE FROM profile_projects WHERE user_id = ?", [req.userId]);
+      for (const [i, p] of projects.entries())
+        await conn.query(
+          "INSERT INTO profile_projects (user_id, name, url, description, position) VALUES (?, ?, ?, ?, ?)",
+          [req.userId, p.name, p.url, p.description, i],
+        );
+      await conn.commit();
+    } catch (err) {
+      await conn.rollback().catch(() => {});
+      throw err;
+    } finally {
+      conn.release();
+    }
+  }
   const [rows] = await pool.query(profileQuery, [req.userId]);
-  res.json(shapeProfile(rows[0]));
+  res.json({ ...shapeProfile(rows[0]), projects: await loadProjects(req.userId) });
 }));
 
 // ---------- Internships ----------
