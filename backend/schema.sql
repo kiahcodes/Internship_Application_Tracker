@@ -111,9 +111,18 @@ CREATE TABLE IF NOT EXISTS applications (
   deadline DATE NULL,
   -- "Remind me on": shows up under Coming up on the Tracker.
   remind_on DATE NULL,
+  -- Posting link for cards without a linked listing (hand-added or imported).
+  link VARCHAR(500) NULL,
+  -- Company and role for cards without a linked listing (imported); linked cards use the listing's.
+  company VARCHAR(100) NULL,
+  role VARCHAR(150) NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   CONSTRAINT uq_user_internship UNIQUE (user_id, internship_id)
 );
+
+ALTER TABLE applications ADD COLUMN IF NOT EXISTS link VARCHAR(500) NULL;
+ALTER TABLE applications ADD COLUMN IF NOT EXISTS company VARCHAR(100) NULL;
+ALTER TABLE applications ADD COLUMN IF NOT EXISTS role VARCHAR(150) NULL;
 
 -- Every move between stages, so analytics can measure how long replies take.
 CREATE TABLE IF NOT EXISTS application_events (

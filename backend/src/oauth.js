@@ -3,7 +3,7 @@ import { pool } from "./db.js";
 import { USERNAME_RE, usernameError } from "./username.js";
 
 /**
- * Verifies a Supabase Auth access token (issued after Google / GitHub / LinkedIn sign-in)
+ * Verifies a Supabase Auth access token (issued after Google / GitHub sign-in)
  * and returns the identity behind it, or null if the token isn't valid.
  */
 export async function identityFromToken(accessToken) {

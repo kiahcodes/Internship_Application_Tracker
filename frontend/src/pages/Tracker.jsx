@@ -4,6 +4,7 @@ import { loadResumeVersions } from "../utils/resume";
 import { loadStudent } from "../utils/student";
 import { CoverLetterDialog } from "../components/CoverLetterDialog.jsx";
 import { ImportDialog } from "../components/ImportDialog.jsx";
+import { ImportGuideDialog } from "../components/ImportGuideDialog.jsx";
 import { Alert, Button, Skeleton } from "../components/ui.jsx";
 import { daysUntil, describeDeadline } from "../utils/internships";
 import "./Tracker.css";
@@ -33,6 +34,7 @@ export function Tracker() {
   const [importFile, setImportFile] = useState("");
   const [importText, setImportText] = useState("");
   const [importing, setImporting] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
   const fileInput = useRef(null);
 
   useEffect(() => {
@@ -152,6 +154,7 @@ export function Tracker() {
     const file = e.target.files?.[0];
     e.target.value = ""; // so choosing the same file again still fires
     if (!file) return;
+    setGuideOpen(false);
     if (file.size > 1024 * 1024) return setError("That file is over 1 MB. Export a smaller sheet or split it.");
     try {
       const text = await file.text();
@@ -241,7 +244,7 @@ export function Tracker() {
       <header className="page-head rise">
         <h1 className="page-title">Your applications</h1>
         <div className="dd-sheet-actions">
-          <Button variant="ghost" size="sm" onClick={() => fileInput.current?.click()}>
+          <Button variant="ghost" size="sm" onClick={() => setGuideOpen(true)}>
             Import CSV
           </Button>
           <Button variant="ghost" size="sm" onClick={exportCsv} disabled={cards.length === 0}>
@@ -442,6 +445,11 @@ export function Tracker() {
         })}
       </div>
 
+      <ImportGuideDialog
+        open={guideOpen}
+        onChoose={() => fileInput.current?.click()}
+        onClose={() => setGuideOpen(false)}
+      />
       <ImportDialog
         report={importReport}
         fileName={importFile}

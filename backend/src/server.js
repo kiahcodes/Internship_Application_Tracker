@@ -296,7 +296,8 @@ mountInternships(app);
 const CARD_SELECT = `
   SELECT a.id, a.internship_id, a.title, a.status, a.resume_id, a.cover_letter, a.cover_letter_id,
          COALESCE(r.file_name, a.resume_file_name) AS resume_name, cl.file_name AS cover_letter_name,
-         i.company, i.role, i.description, i.url AS posting_url,
+         COALESCE(i.company, a.company) AS company, COALESCE(i.role, a.role) AS role, i.description,
+         COALESCE(i.url, a.link) AS posting_url,
          COALESCE(to_char(i.deadline, 'YYYY-MM-DD'), to_char(a.deadline, 'YYYY-MM-DD')) AS deadline,
          to_char(a.remind_on, 'YYYY-MM-DD') AS remind_on
   FROM applications a
@@ -333,11 +334,12 @@ app.get("/api/tracker", requireAuth, h(async (req, res) => {
 // ---------- Spreadsheet export / import ----------
 app.get("/api/tracker/export", requireAuth, h(async (req, res) => {
   const [rows] = await pool.query(
-    `SELECT a.title, a.status, i.company, i.role, COALESCE(r.file_name, a.resume_file_name) AS resume,
+    `SELECT a.title, a.status, COALESCE(i.company, a.company) AS company, COALESCE(i.role, a.role) AS role,
+            COALESCE(r.file_name, a.resume_file_name) AS resume,
             (a.cover_letter IS NOT NULL OR a.cover_letter_id IS NOT NULL) AS letter,
             to_char(a.created_at, 'YYYY-MM-DD') AS applied_on,
             COALESCE(to_char(i.deadline, 'YYYY-MM-DD'), to_char(a.deadline, 'YYYY-MM-DD')) AS deadline,
-            to_char(a.remind_on, 'YYYY-MM-DD') AS remind_on, i.url
+            to_char(a.remind_on, 'YYYY-MM-DD') AS remind_on, COALESCE(i.url, a.link) AS url
      FROM applications a
      LEFT JOIN resumes r ON r.id = a.resume_id
      LEFT JOIN internships i ON i.id = a.internship_id
@@ -378,9 +380,9 @@ app.post("/api/tracker/import", requireAuth, express.text({ type: ["text/csv", "
       await conn.beginTransaction();
       for (const r of fresh) {
         await conn.query(
-          `INSERT INTO applications (user_id, title, status, deadline, remind_on, created_at)
-           VALUES (?, ?, ?, ?, ?, COALESCE((?::text || ' 12:00:00')::timestamptz, NOW()))`,
-          [req.userId, r.title, r.status, r.deadline, r.remind_on, r.applied_on],
+          `INSERT INTO applications (user_id, title, status, deadline, remind_on, link, company, role, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, COALESCE((?::text || ' 12:00:00')::timestamptz, NOW()))`,
+          [req.userId, r.title, r.status, r.deadline, r.remind_on, r.link, r.company, r.role, r.applied_on],
         );
       }
       await conn.commit();
@@ -395,7 +397,8 @@ app.post("/api/tracker/import", requireAuth, express.text({ type: ["text/csv", "
     added: fresh.length,
     skipped: skipped.sort((a, b) => a.line - b.line),
     warnings: parsed.warnings,
-    preview: fresh.slice(0, 8).map(({ title, status, applied_on, deadline }) => ({ title, status, applied_on, deadline })),
+    ignored: parsed.ignored,
+    preview: fresh.slice(0, 8).map(({ title, company, role, status, applied_on, deadline }) => ({ title, company, role, status, applied_on, deadline })),
     dryRun: req.query.dryRun === "1",
   });
 }));

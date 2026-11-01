@@ -19,12 +19,13 @@ export function ImportDialog({ report, fileName, busy, onConfirm, onClose }) {
             <table className="imp-table">
               <caption className="sr-only">First rows that will be added</caption>
               <thead>
-                <tr><th scope="col">Application</th><th scope="col">Stage</th><th scope="col">Applied</th></tr>
+                <tr><th scope="col">Application</th><th scope="col">Company</th><th scope="col">Stage</th><th scope="col">Applied</th></tr>
               </thead>
               <tbody>
                 {report.preview.map((r) => (
                   <tr key={r.title}>
                     <td>{r.title}</td>
+                    <td>{r.company || "—"}</td>
                     <td>{r.status}</td>
                     <td>{r.applied_on ? formatDay(r.applied_on) : "Today"}</td>
                   </tr>
@@ -39,6 +40,11 @@ export function ImportDialog({ report, fileName, busy, onConfirm, onClose }) {
               <summary>{report.warnings.length} {report.warnings.length === 1 ? "thing" : "things"} we changed</summary>
               <ul>{report.warnings.map((w, i) => <li key={i}>Row {w.line}: {w.reason}</li>)}</ul>
             </details>
+          )}
+          {report.ignored?.length > 0 && (
+            <p className="imp-more">
+              Not imported (no place to keep them yet): {report.ignored.join(", ")}.
+            </p>
           )}
           {report.skipped.length > 0 && (
             <details className="imp-details">

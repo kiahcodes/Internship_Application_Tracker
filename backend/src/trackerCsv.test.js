@@ -52,3 +52,23 @@ test("normalizeImport explains a file it cannot use", () => {
   assert.match(normalizeImport("Foo,Bar\n1,2").error, /Couldn't find/);
   assert.match(normalizeImport("").error, /no rows/);
 });
+
+test("a spreadsheet with its own layout imports: Application date beats a blank Applied tick", () => {
+  const sheet = [
+    ["Sr. No.", "Company name", "Applied", "Locations", "Role", "Skillset", "Avg package", "Cover letter required", "Application date", "Result By", "Link"].join("\t"),
+    ["", "sanas", "", "", "Software Engineering Intern - SI & Agentic AI Platform", "", "", "", "15/08/2026", "", "https://ats.rippling.com/sanas/jobs/x/apply?a=1&b=2"].join("\t"),
+    ["2", "Acme", "Yes", "Pune", "Dev", "", "", "", "", "20/08/2026", "not a link"].join("\t"),
+  ].join("\n");
+  const out = normalizeImport(sheet);
+  assert.equal(out.rows.length, 2);
+  assert.equal(out.rows[0].title, "Software Engineering Intern - SI & Agentic AI Platform – sanas");
+  assert.equal(out.rows[0].applied_on, "2026-08-15");
+  assert.equal(out.rows[0].company, "sanas");
+  assert.equal(out.rows[0].role, "Software Engineering Intern - SI & Agentic AI Platform");
+  assert.equal(out.rows[0].link, "https://ats.rippling.com/sanas/jobs/x/apply?a=1&b=2");
+  assert.equal(out.rows[1].applied_on, null); // "Yes" is a tick, not a date
+  assert.equal(out.rows[1].remind_on, "2026-08-20"); // Result By
+  assert.equal(out.rows[1].link, null);
+  assert.deepEqual(out.warnings.map((w) => w.reason), ["Link isn't a web address (http/https), so it was left out"]);
+  assert.deepEqual(out.ignored, ["Applied", "Locations", "Skillset", "Avg package", "Cover letter required"].filter((h) => h !== "Applied"));
+});

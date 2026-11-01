@@ -24,15 +24,6 @@ const PROVIDERS = [
       </svg>
     ),
   },
-  {
-    id: "linkedin_oidc",
-    label: "LinkedIn",
-    icon: (
-      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-        <path fill="#0A66C2" d="M20.4 20.5h-3.6v-5.6c0-1.3 0-3-1.8-3s-2.1 1.4-2.1 2.9v5.7H9.3V9h3.4v1.6c.5-.9 1.6-1.8 3.4-1.8 3.6 0 4.3 2.4 4.3 5.5v6.2zM5.300 7.400a2.1 2.1 0 1 1 0-4.2 2.1 2.1 0 0 1 0 4.2zM7.100 20.500H3.500V9h3.600v11.500z" />
-      </svg>
-    ),
-  },
 ];
 
 /** "Continue with …" buttons. Sends the browser to the provider, then back to /auth/callback. */

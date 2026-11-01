@@ -92,9 +92,6 @@
   align-items: center;
   gap: 1rem;
 }
-.an-toggle {
-  font-size: 0.88rem;
-}
 
 .seg {
   display: inline-flex;

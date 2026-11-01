@@ -19,22 +19,8 @@ function Kpi({ label, value, note }) {
   );
 }
 
-function TableToggle({ on, onChange }) {
-  return (
-    <button
-      type="button"
-      className="link-btn an-toggle"
-      aria-pressed={on}
-      onClick={() => onChange(!on)}
-    >
-      {on ? "Show chart" : "Show as table"}
-    </button>
-  );
-}
-
 /* ---------- Funnel: ordered stages, so one hue stepping light to dark ---------- */
 function Funnel({ data }) {
-  const [table, setTable] = useState(false);
   const { funnel, total, rejected } = data;
   const reachedOA = funnel[1].count;
 
@@ -50,59 +36,33 @@ function Funnel({ data }) {
             reached each stage.
           </p>
         </div>
-        <TableToggle on={table} onChange={setTable} />
       </div>
 
-      {table ? (
-        <table className="an-table">
-          <thead>
-            <tr>
-              <th scope="col">Stage</th>
-              <th scope="col" className="num">
-                Applications
-              </th>
-              <th scope="col" className="num">
-                Of all applied
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {funnel.map((f) => (
-              <tr key={f.stage}>
-                <th scope="row">{f.stage}</th>
-                <td className="num">{f.count}</td>
-                <td className="num">{fmtPct(f.pctOfApplied)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      ) : (
-        <ol className="funnel">
-          {funnel.map((f, i) => {
-            const prev = i > 0 ? funnel[i - 1].count : null;
-            return (
-              <li className="funnel-row" key={f.stage}>
-                <span className="funnel-label">{f.stage}</span>
-                <span className="funnel-track" aria-hidden="true">
-                  <span
-                    className={`funnel-bar funnel-bar--${i}`}
-                    style={{ width: `${f.pctOfApplied ?? 0}%` }}
-                  />
-                </span>
-                <span className="funnel-value">
-                  <strong>{f.count}</strong>
-                  <span className="funnel-pct">{fmtPct(f.pctOfApplied)}</span>
-                </span>
-                <span className="funnel-step">
-                  {prev
-                    ? `${Math.round((f.count / prev) * 100)}% of previous stage`
-                    : ""}
-                </span>
-              </li>
-            );
-          })}
-        </ol>
-      )}
+      <ol className="funnel">
+        {funnel.map((f, i) => {
+          const prev = i > 0 ? funnel[i - 1].count : null;
+          return (
+            <li className="funnel-row" key={f.stage}>
+              <span className="funnel-label">{f.stage}</span>
+              <span className="funnel-track" aria-hidden="true">
+                <span
+                  className={`funnel-bar funnel-bar--${i}`}
+                  style={{ width: `${f.pctOfApplied ?? 0}%` }}
+                />
+              </span>
+              <span className="funnel-value">
+                <strong>{f.count}</strong>
+                <span className="funnel-pct">{fmtPct(f.pctOfApplied)}</span>
+              </span>
+              <span className="funnel-step">
+                {prev
+                  ? `${Math.round((f.count / prev) * 100)}% of previous stage`
+                  : ""}
+              </span>
+            </li>
+          );
+        })}
+      </ol>
 
       <p className="an-note">
         {rejected > 0 && (
@@ -129,7 +89,6 @@ function niceMax(max) {
 
 function OverTime({ data }) {
   const [period, setPeriod] = useState("week");
-  const [table, setTable] = useState(false);
   const series = period === "week" ? data.perWeek : data.perMonth;
   const max = Math.max(...series.map((b) => b.count), 0);
   const top = niceMax(max);
@@ -174,101 +133,76 @@ function OverTime({ data }) {
               </button>
             ))}
           </div>
-          <TableToggle on={table} onChange={setTable} />
         </div>
       </div>
 
-      {table ? (
-        <table className="an-table">
-          <thead>
-            <tr>
-              <th scope="col">
-                {period === "week" ? "Week starting" : "Month"}
-              </th>
-              <th scope="col" className="num">
-                Applications
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {series.map((b) => (
-              <tr key={b.start}>
-                <th scope="row">{label(b, true)}</th>
-                <td className="num">{b.count}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      ) : (
-        <div
-          className="cols"
-          role="group"
-          aria-label={`Applications per ${period}`}
-        >
-          <div className="cols-y" aria-hidden="true">
-            {ticks.map((t) => (
-              <span
-                key={t}
-                className="cols-tick"
-                style={{ bottom: `${(t / top) * 100}%` }}
+      <div
+        className="cols"
+        role="group"
+        aria-label={`Applications per ${period}`}
+      >
+        <div className="cols-y" aria-hidden="true">
+          {ticks.map((t) => (
+            <span
+              key={t}
+              className="cols-tick"
+              style={{ bottom: `${(t / top) * 100}%` }}
+            >
+              {t}
+            </span>
+          ))}
+        </div>
+        <div className="cols-plot">
+          {ticks.map((t) => (
+            <span
+              key={t}
+              className="cols-grid"
+              aria-hidden="true"
+              style={{ bottom: `${(t / top) * 100}%` }}
+            />
+          ))}
+          <div className="cols-bars">
+            {series.map((b, i) => (
+              <div
+                className="col"
+                key={b.start}
+                tabIndex={0}
+                aria-label={`${label(b, true)}: ${plural(b.count, "application", "applications")}`}
               >
-                {t}
-              </span>
-            ))}
-          </div>
-          <div className="cols-plot">
-            {ticks.map((t) => (
-              <span
-                key={t}
-                className="cols-grid"
-                aria-hidden="true"
-                style={{ bottom: `${(t / top) * 100}%` }}
-              />
-            ))}
-            <div className="cols-bars">
-              {series.map((b, i) => (
-                <div
-                  className="col"
-                  key={b.start}
-                  tabIndex={0}
-                  aria-label={`${label(b, true)}: ${plural(b.count, "application", "applications")}`}
-                >
-                  <span className="col-slot">
-                    <span
-                      className="col-barwrap"
-                      style={{ height: `${(b.count / top) * 100}%` }}
-                    >
-                      {b === latest && b.count > 0 && (
-                        <span className="col-peak" aria-hidden="true">
-                          {b.count}
-                        </span>
-                      )}
-                      <span className="col-bar" />
-                    </span>
-                  </span>
+                <span className="col-slot">
                   <span
-                    className={`col-x ${i % 2 === 0 ? "" : "col-x--alt"}`}
-                    aria-hidden="true"
+                    className="col-barwrap"
+                    style={{ height: `${(b.count / top) * 100}%` }}
                   >
-                    {label(b)}
+                    {b === latest && b.count > 0 && (
+                      <span className="col-peak" aria-hidden="true">
+                        {b.count}
+                      </span>
+                    )}
+                    <span className="col-bar" />
                   </span>
-                  <span className="col-tip" aria-hidden="true">
-                    <strong>
-                      {plural(b.count, "application", "applications")}
-                    </strong>
-                    <span>{label(b, true)}</span>
-                  </span>
-                </div>
-              ))}
-            </div>
+                </span>
+                <span
+                  className={`col-x ${i % 2 === 0 ? "" : "col-x--alt"}`}
+                  aria-hidden="true"
+                >
+                  {label(b)}
+                </span>
+                <span className="col-tip" aria-hidden="true">
+                  <strong>
+                    {plural(b.count, "application", "applications")}
+                  </strong>
+                  <span>{label(b, true)}</span>
+                </span>
+              </div>
+            ))}
           </div>
         </div>
-      )}
+      </div>
     </section>
   );
 }
 
-/* ---------- Which resume / source gets replies ---------- */
 function Breakdown({ data }) {
   const [by, setBy] = useState("resume");
   const rows = by === "resume" ? data.byResume : data.bySource;
@@ -290,7 +224,7 @@ function Breakdown({ data }) {
           <p className="an-sub">
             {best
               ? `${best.label} has the highest reply rate: ${fmtPct(best.responseRate)} across ${plural(best.applied, "application", "applications")}.`
-              : `Groups need ${MIN_COMPARE}+ applications before they're worth comparing. Small samples swing a lot.`}
+              : `Groups need ${MIN_COMPARE}+ applications before they're worth comparing.`}
           </p>
         </div>
         <div className="seg" role="group" aria-label="Break down by">
@@ -354,10 +288,6 @@ function Breakdown({ data }) {
           </tbody>
         </table>
       </div>
-      <p className="an-note">
-        These show what happened, not why. A resume can look better simply
-        because it was sent to easier roles.
-      </p>
     </section>
   );
 }
@@ -465,11 +395,6 @@ export function Analytics() {
           <Funnel data={data} />
           <OverTime data={data} />
           <Breakdown data={data} />
-
-          <p className="an-foot">
-            Time to hear back counts stage changes made in this app. Older cards
-            still count toward reply rates, just not toward the average.
-          </p>
         </div>
       )}
     </div>

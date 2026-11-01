@@ -3,16 +3,22 @@
 export const STATUSES = ["Applied", "OA", "Interview", "Offer", "Rejected"];
 export const MAX_IMPORT_ROWS = 500;
 
-// Column names people actually use in their own spreadsheets.
+// Column names people actually use in their own spreadsheets. Earlier names win, and a blank
+// cell falls through to the next matching column ("Application date" before a bare "Applied").
 const HEADERS = {
   title: ["title", "application", "applications", "name", "internship"],
-  company: ["company", "organisation", "organization", "employer", "firm"],
-  role: ["role", "position", "job", "job title", "designation", "profile"],
+  company: ["company", "company name", "organisation", "organization", "employer", "firm"],
+  role: ["role", "job role", "position", "job", "job title", "designation", "profile"],
   status: ["status", "stage", "state", "progress", "result"],
-  applied: ["applied on", "applied", "applied date", "date applied", "application date", "date"],
+  applied: ["applied on", "application date", "date applied", "applied date", "applied", "date"],
   deadline: ["deadline", "due", "due date", "last date", "apply by", "closing date"],
-  remind: ["remind on", "reminder", "remind", "follow up", "follow-up", "follow up on"],
+  remind: ["remind on", "reminder", "remind", "follow up", "follow-up", "follow up on", "result by", "result date", "result on"],
+  link: ["link", "url", "job link", "apply link", "application link", "posting", "posting link"],
 };
+// Columns we know about but have nowhere to keep; not worth warning about.
+const IGNORABLE = ["sr no", "sr. no.", "sr. no", "s no", "s. no.", "sno", "no", "no.", "#", "serial no", "sl no", "sl. no."];
+// "Applied" is often a tick box rather than a date.
+const TICK = /^(yes|no|y|n|true|false|done|x|✓|✔|✗|☑|☐|1|0)$/i;
 
 /** RFC 4180 parsing, plus the `;` and tab separators Excel uses in some locales. */
 export function parseCsv(text) {
@@ -96,9 +102,11 @@ export function normalizeImport(text) {
   if (table.length - 1 > MAX_IMPORT_ROWS) return { error: `That file has more than ${MAX_IMPORT_ROWS} rows. Split it and import in parts.` };
 
   const names = table[0].map((h) => h.trim().toLowerCase().replace(/[_]+/g, " ").replace(/\s+/g, " "));
-  const col = Object.fromEntries(Object.entries(HEADERS).map(([k, aliases]) => [k, names.findIndex((n) => aliases.includes(n))]));
-  if (col.title < 0 && col.company < 0 && col.role < 0)
+  const col = Object.fromEntries(Object.entries(HEADERS).map(([k, aliases]) => [k, aliases.map((a) => names.indexOf(a)).filter((i) => i >= 0)]));
+  if (!col.title.length && !col.company.length && !col.role.length)
     return { error: `Couldn't find a Title, Company or Role column. Found: ${table[0].map((h) => h.trim()).filter(Boolean).join(", ") || "nothing"}.` };
+  const used = new Set(Object.values(col).flat());
+  const ignored = table[0].map((h, i) => [h.trim(), i]).filter(([h, i]) => h && !used.has(i) && !IGNORABLE.includes(h.toLowerCase())).map(([h]) => h);
 
   const rows = [];
   const skipped = [];
@@ -106,7 +114,13 @@ export function normalizeImport(text) {
   const seen = new Map();
   table.slice(1).forEach((cells, i) => {
     const line = i + 2;
-    const get = (k) => (col[k] >= 0 ? unguard((cells[col[k]] ?? "").trim()) : "");
+    const get = (k) => {
+      for (const i of col[k]) {
+        const v = unguard((cells[i] ?? "").trim());
+        if (v && !(k === "applied" && TICK.test(v))) return v;
+      }
+      return "";
+    };
     const title = (get("title") || [get("role"), get("company")].filter(Boolean).join(" – ")).slice(0, 255);
     if (!title) return skipped.push({ line, reason: "No title, role or company" });
     const key = title.toLowerCase();
@@ -121,7 +135,15 @@ export function normalizeImport(text) {
       if (d === undefined) warnings.push({ line, reason: `${label} "${get(key2)}" isn't a date, so it was left out` });
       dates[field] = d ?? null;
     }
-    rows.push({ line, title, status, ...dates });
+    let link = get("link");
+    if (link && (!/^https?:\/\/\S+$/i.test(link) || link.length > 500)) {
+      warnings.push({ line, reason: "Link isn't a web address (http/https), so it was left out" });
+      link = "";
+    }
+    rows.push({
+      line, title, status, ...dates, link: link || null,
+      company: get("company").slice(0, 100) || null, role: get("role").slice(0, 150) || null,
+    });
   });
-  return { rows, skipped, warnings };
+  return { rows, skipped, warnings, ignored };
 }
