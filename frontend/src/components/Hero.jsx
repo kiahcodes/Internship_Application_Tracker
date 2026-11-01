@@ -43,7 +43,7 @@ export const Hero = () => {
         <span key={WORDS[wordIdx]} className="hero-word">
           {WORDS[wordIdx]}
         </span>{" "}
-        stand.
+        stands.
       </h1>
       <p className="hero-lede">
         Track which resume went to which company, and where every application

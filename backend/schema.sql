@@ -27,8 +27,17 @@ CREATE TABLE IF NOT EXISTS profiles (
   github VARCHAR(200) NOT NULL DEFAULT '',
   linkedin VARCHAR(200) NOT NULL DEFAULT '',
   portfolio VARCHAR(200) NOT NULL DEFAULT '',
+  google_scholar VARCHAR(200) NOT NULL DEFAULT '',
+  orcid VARCHAR(200) NOT NULL DEFAULT '',
+  codeforces VARCHAR(200) NOT NULL DEFAULT '',
+  leetcode VARCHAR(200) NOT NULL DEFAULT '',
   preferred_locations VARCHAR(300) NOT NULL DEFAULT ''
 );
+-- Databases created before these links existed.
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS google_scholar VARCHAR(200) NOT NULL DEFAULT '';
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS orcid VARCHAR(200) NOT NULL DEFAULT '';
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS codeforces VARCHAR(200) NOT NULL DEFAULT '';
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS leetcode VARCHAR(200) NOT NULL DEFAULT '';
 
 -- One-time password reset links. Only a hash of the token is stored.
 CREATE TABLE IF NOT EXISTS password_resets (

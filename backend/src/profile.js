@@ -33,7 +33,12 @@ export function cleanProfile(body, current = {}) {
   const github = cleanUrl(body.github, "GitHub");
   const linkedin = cleanUrl(body.linkedin, "LinkedIn");
   const portfolio = cleanUrl(body.portfolio, "Portfolio");
-  const failed = [course, semester, branch, github, linkedin, portfolio].find((x) => x.error);
+  const google_scholar = cleanUrl(body.google_scholar, "Google Scholar");
+  const orcid = cleanUrl(body.orcid, "ORCID");
+  const codeforces = cleanUrl(body.codeforces, "Codeforces");
+  const leetcode = cleanUrl(body.leetcode, "LeetCode");
+  const failed = [course, semester, branch, github, linkedin, portfolio, google_scholar, orcid, codeforces, leetcode]
+    .find((x) => x.error);
   if (failed) return { error: failed.error };
 
   let grad_year = null;
@@ -55,6 +60,7 @@ export function cleanProfile(body, current = {}) {
       course: course.value, semester: semester.value, branch: branch.value,
       grad_year, cgpa, phone,
       github: github.value, linkedin: linkedin.value, portfolio: portfolio.value,
+      google_scholar: google_scholar.value, orcid: orcid.value, codeforces: codeforces.value, leetcode: leetcode.value,
       preferred_locations: String(body.preferred_locations ?? "").trim().slice(0, 300),
       bio: String(body.bio ?? ""), skills: String(body.skills ?? "").slice(0, 500),
     },

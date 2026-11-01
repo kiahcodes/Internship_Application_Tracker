@@ -1,7 +1,9 @@
-import { useState } from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import logo from "../assets/logo.png";
 import { isAuthenticated, loadSession } from "../utils/auth";
+import { completeness } from "../utils/profileCompleteness";
+import { PROFILE_CHANGED, loadStudent } from "../utils/student";
 import "./Navbar.css";
 
 export function Navbar() {
@@ -9,6 +11,24 @@ export function Navbar() {
   useLocation(); // re-render on navigation so the login state below stays current
   const loggedIn = isAuthenticated();
   const initial = (loadSession()?.name || "?").trim().charAt(0).toUpperCase();
+
+  const [percent, setPercent] = useState(null);
+
+  // Profile completeness for the bar under the navbar; refreshed whenever the profile is saved.
+  useEffect(() => {
+    if (!loggedIn) return undefined;
+    let stale = false;
+    const refresh = () =>
+      loadStudent()
+        .then((p) => { if (!stale) setPercent(completeness(p).percent); })
+        .catch(() => { if (!stale) setPercent(null); });
+    refresh();
+    window.addEventListener(PROFILE_CHANGED, refresh);
+    return () => {
+      stale = true;
+      window.removeEventListener(PROFILE_CHANGED, refresh);
+    };
+  }, [loggedIn]);
 
   const closeMenu = () => setIsOpen(false);
 
@@ -86,6 +106,32 @@ export function Navbar() {
           </li>
         )}
       </ul>
+
+      {loggedIn && percent !== null && (
+        <Link
+          to="/profile"
+          className="nav-progress"
+          title={percent === 100 ? "Your profile is complete" : "Finish your profile"}
+        >
+          <span
+            className="nav-progress-track"
+            role="progressbar"
+            aria-label="Profile completeness"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={percent}
+          >
+            <span className="nav-progress-fill" style={{ width: `${percent}%` }} />
+          </span>
+          <span
+            className={`nav-progress-marker${percent > 80 ? " nav-progress-marker--flip" : ""}`}
+            style={{ left: `clamp(8px, ${percent}%, calc(100% - 8px))` }}
+          >
+            <span className="nav-progress-tip" aria-hidden="true" />
+            <span className="nav-progress-label">{percent}%</span>
+          </span>
+        </Link>
+      )}
     </nav>
   );
 }

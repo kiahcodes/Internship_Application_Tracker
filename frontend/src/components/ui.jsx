@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 const cx = (...parts) => parts.filter(Boolean).join(" ");
 
@@ -35,17 +35,43 @@ export function Button({
 
 export function Field({ label, id, className, hint, multiline, ...input }) {
   const Control = multiline ? "textarea" : "input";
+  // Password fields get a show/hide button.
+  const isPassword = input.type === "password";
+  const [shown, setShown] = useState(false);
+  const control = (
+    <Control
+      id={id}
+      className={cx("field-input", multiline && "field-input--area", isPassword && "field-input--has-toggle")}
+      aria-describedby={hint ? `${id}-hint` : undefined}
+      {...input}
+      type={isPassword && shown ? "text" : input.type}
+    />
+  );
   return (
     <div className={cx("field", className)}>
       <label className="field-label" htmlFor={id}>
         {label}
       </label>
-      <Control
-        id={id}
-        className={cx("field-input", multiline && "field-input--area")}
-        aria-describedby={hint ? `${id}-hint` : undefined}
-        {...input}
-      />
+      {isPassword ? (
+        <div className="field-password">
+          {control}
+          <button
+            type="button"
+            className="field-eye"
+            onClick={() => setShown((v) => !v)}
+            aria-label={shown ? "Hide password" : "Show password"}
+            aria-pressed={shown}
+          >
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z" />
+              <circle cx="12" cy="12" r="3" />
+              {shown && <path d="M3 3l18 18" />}
+            </svg>
+          </button>
+        </div>
+      ) : (
+        control
+      )}
       {hint && (
         <span className="field-hint" id={`${id}-hint`}>
           {hint}

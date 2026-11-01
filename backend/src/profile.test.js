@@ -13,6 +13,13 @@ test("accepts a full, valid profile and tidies links", () => {
   assert.equal(values.grad_year, 2027);
 });
 
+test("the extra profile links are tidied and validated too", () => {
+  const { values } = cleanProfile({ leetcode: "leetcode.com/u/kiah", orcid: "orcid.org/0000-0002-1825-0097", codeforces: "codeforces.com/profile/kiah" });
+  assert.equal(values.leetcode, "https://leetcode.com/u/kiah");
+  assert.equal(values.orcid, "https://orcid.org/0000-0002-1825-0097");
+  assert.equal(cleanProfile({ google_scholar: "nope" }).error, "Google Scholar doesn't look like a link");
+});
+
 test("rejects values outside the choices and ranges", () => {
   assert.match(cleanProfile({ course: "Full Stack Development" }).error, /course/);
   assert.match(cleanProfile({ semester: "11" }).error, /semester/);

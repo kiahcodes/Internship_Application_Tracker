@@ -243,7 +243,8 @@ app.delete("/api/account", requireAuth, h(async (req, res) => {
 // ---------- Profile ----------
 const profileQuery = `
   SELECT u.name, u.username, u.email, p.course, p.semester, p.bio, p.skills, p.branch, p.grad_year, p.cgpa,
-         p.phone, p.github, p.linkedin, p.portfolio, p.preferred_locations
+         p.phone, p.github, p.linkedin, p.portfolio, p.google_scholar, p.orcid, p.codeforces, p.leetcode,
+         p.preferred_locations
   FROM users u LEFT JOIN profiles p ON p.user_id = u.id WHERE u.id = ?`;
 
 app.get("/api/profile", requireAuth, h(async (req, res) => {
@@ -272,14 +273,17 @@ app.put("/api/profile", requireAuth, h(async (req, res) => {
     String(name).trim(), cleanEmail, req.userId,
   ]);
   await pool.query(
-    `INSERT INTO profiles (user_id, course, semester, bio, skills, branch, grad_year, cgpa, phone, github, linkedin, portfolio, preferred_locations)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `INSERT INTO profiles (user_id, course, semester, bio, skills, branch, grad_year, cgpa, phone, github, linkedin, portfolio,
+                           google_scholar, orcid, codeforces, leetcode, preferred_locations)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT (user_id) DO UPDATE SET course = EXCLUDED.course, semester = EXCLUDED.semester, bio = EXCLUDED.bio,
        skills = EXCLUDED.skills, branch = EXCLUDED.branch, grad_year = EXCLUDED.grad_year, cgpa = EXCLUDED.cgpa,
        phone = EXCLUDED.phone, github = EXCLUDED.github, linkedin = EXCLUDED.linkedin,
-       portfolio = EXCLUDED.portfolio, preferred_locations = EXCLUDED.preferred_locations`,
+       portfolio = EXCLUDED.portfolio, google_scholar = EXCLUDED.google_scholar, orcid = EXCLUDED.orcid,
+       codeforces = EXCLUDED.codeforces, leetcode = EXCLUDED.leetcode,
+       preferred_locations = EXCLUDED.preferred_locations`,
     [req.userId, v.course, v.semester, v.bio, v.skills, v.branch, v.grad_year, v.cgpa, v.phone,
-     v.github, v.linkedin, v.portfolio, v.preferred_locations],
+     v.github, v.linkedin, v.portfolio, v.google_scholar, v.orcid, v.codeforces, v.leetcode, v.preferred_locations],
   );
   const [rows] = await pool.query(profileQuery, [req.userId]);
   res.json(shapeProfile(rows[0]));

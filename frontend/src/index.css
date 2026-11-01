@@ -247,6 +247,38 @@ h3 {
   font-size: 1rem;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
+.field-password {
+  position: relative;
+  display: flex;
+}
+.field-password .field-input {
+  flex: 1;
+  min-width: 0;
+}
+.field-input--has-toggle {
+  padding-right: 2.9rem;
+}
+.field-eye {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 2.9rem;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: none;
+  color: var(--c2c-ink-soft);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+.field-eye:hover {
+  color: var(--c2c-ink);
+}
+.field-eye:focus-visible {
+  outline: 2px solid var(--c2c-green);
+  outline-offset: -2px;
+}
 .field-input::placeholder {
   color: #85735c;
 }

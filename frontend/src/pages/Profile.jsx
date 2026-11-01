@@ -4,6 +4,7 @@ import { deleteAccount, loadStudent, saveStudent } from "../utils/student";
 import { getRole, logout, setSessionName } from "../utils/auth";
 import { Alert, Button, ConfirmDialog, Field, Select, Skeleton } from "../components/ui.jsx";
 import { BRANCHES, COURSES, SEMESTERS, graduationYears, withCurrent } from "../utils/options";
+import { completeness, hasValue } from "../utils/profileCompleteness";
 import "./Profile.css";
 
 const splitSkills = (skills) =>
@@ -16,24 +17,11 @@ const LINKS = [
   ["github", "GitHub"],
   ["linkedin", "LinkedIn"],
   ["portfolio", "Portfolio"],
+  ["google_scholar", "Google Scholar"],
+  ["orcid", "ORCID"],
+  ["codeforces", "Codeforces"],
+  ["leetcode", "LeetCode"],
 ];
-
-// What a typical application form asks for. Drives the "complete your profile" meter.
-const CHECKLIST = [
-  ["phone", "phone number"],
-  ["course", "course"],
-  ["branch", "branch"],
-  ["semester", "semester"],
-  ["grad_year", "graduation year"],
-  ["cgpa", "CGPA"],
-  ["skills", "skills"],
-  ["bio", "short bio"],
-  ["github", "GitHub"],
-  ["linkedin", "LinkedIn"],
-  ["portfolio", "portfolio"],
-  ["preferred_locations", "preferred locations"],
-];
-const hasValue = (v) => v !== null && v !== undefined && String(v).trim() !== "";
 
 const hostOf = (url) => {
   try {
@@ -167,8 +155,7 @@ export function Profile() {
   const skills = splitSkills(student.skills);
   const draftSkills = splitSkills(draft.skills);
   const locations = splitSkills(student.preferred_locations);
-  const missing = CHECKLIST.filter(([key]) => !hasValue(student[key]));
-  const percent = Math.round(((CHECKLIST.length - missing.length) / CHECKLIST.length) * 100);
+  const { percent, missing } = completeness(student);
   const sub = [student.course, student.branch, student.semester && `Semester ${student.semester}`].filter(Boolean).join(" · ");
   const editLink = (label) => (
     <button type="button" className="link-btn" onClick={() => setIsEditing(true)}>{label}</button>
@@ -236,6 +223,10 @@ export function Profile() {
                 <Field id="pf-github" label="GitHub" name="github" value={draft.github || ""} onChange={set} placeholder="github.com/username" />
                 <Field id="pf-linkedin" label="LinkedIn" name="linkedin" value={draft.linkedin || ""} onChange={set} placeholder="linkedin.com/in/username" />
                 <Field id="pf-portfolio" label="Portfolio" name="portfolio" value={draft.portfolio || ""} onChange={set} placeholder="yourname.dev" />
+                <Field id="pf-leetcode" label="LeetCode" name="leetcode" value={draft.leetcode || ""} onChange={set} placeholder="leetcode.com/u/username" />
+                <Field id="pf-codeforces" label="Codeforces" name="codeforces" value={draft.codeforces || ""} onChange={set} placeholder="codeforces.com/profile/handle" />
+                <Field id="pf-scholar" label="Google Scholar" name="google_scholar" value={draft.google_scholar || ""} onChange={set} placeholder="scholar.google.com/citations?user=..." />
+                <Field id="pf-orcid" label="ORCID" name="orcid" value={draft.orcid || ""} onChange={set} placeholder="orcid.org/0000-0000-0000-0000" />
               </div>
             </Section>
 
@@ -311,7 +302,7 @@ export function Profile() {
                     ))}
                   </ul>
                 ) : (
-                  <p className="p-missing">No links yet. {editLink("Add GitHub or LinkedIn")}</p>
+                  <p className="p-missing">No links yet. {editLink("Add GitHub, LeetCode or LinkedIn")}</p>
                 )}
               </Section>
             </div>
