@@ -13,7 +13,10 @@ export const Hero = () => {
   const [wordIdx, setWordIdx] = useState(0);
   useEffect(() => {
     if (reducedMotion()) return;
-    const id = setInterval(() => setWordIdx((i) => (i + 1) % WORDS.length), 2400);
+    const id = setInterval(
+      () => setWordIdx((i) => (i + 1) % WORDS.length),
+      2400,
+    );
     return () => clearInterval(id);
   }, []);
 
@@ -37,22 +40,33 @@ export const Hero = () => {
       )}
       <h1 className="hero-title">
         Know where every{" "}
-        <span key={WORDS[wordIdx]} className="hero-word">{WORDS[wordIdx]}</span>{" "}
-        stands.
+        <span key={WORDS[wordIdx]} className="hero-word">
+          {WORDS[wordIdx]}
+        </span>{" "}
+        stand.
       </h1>
       <p className="hero-lede">
-        Track which resume went to which company, and where every application stands.
+        Track which resume went to which company, and where every application
+        stands.
       </p>
       <div className="hero-actions">
         {signedIn ? (
           <>
-            <Button as={Link} to="/internships">Browse internships</Button>
-            <Button as={Link} to="/tracker" variant="ghost">Open your tracker</Button>
+            <Button as={Link} to="/internships">
+              Browse internships
+            </Button>
+            <Button as={Link} to="/tracker" variant="ghost">
+              Open your tracker
+            </Button>
           </>
         ) : (
           <>
-            <Button as={Link} to="/signup">Create an account</Button>
-            <Button as={Link} to="/login" variant="ghost">Sign in</Button>
+            <Button as={Link} to="/signup">
+              Create an account
+            </Button>
+            <Button as={Link} to="/login" variant="ghost">
+              Sign in
+            </Button>
           </>
         )}
       </div>
