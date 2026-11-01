@@ -1,12 +1,15 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { AuthShell } from "../components/AuthShell";
 import { Alert, Button, Field } from "../components/ui";
-import { signup } from "../utils/auth";
+import { SocialButtons } from "../components/SocialButtons";
+import { checkUsername, signup } from "../utils/auth";
 
 export const SignupPage = () => {
   const navigate = useNavigate();
   const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
+  const [usernameNote, setUsernameNote] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -14,6 +17,25 @@ export const SignupPage = () => {
   const [inviteCode, setInviteCode] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+
+  // Ask the server whether the handle is free, once the user pauses typing.
+  useEffect(() => {
+    const u = username.trim().toLowerCase();
+    if (!u) return undefined;
+    let stale = false;
+    const timer = setTimeout(async () => {
+      try {
+        const r = await checkUsername(u);
+        if (!stale) setUsernameNote(r.available ? `@${u} is available` : r.reason);
+      } catch {
+        if (!stale) setUsernameNote("");
+      }
+    }, 400);
+    return () => {
+      stale = true;
+      clearTimeout(timer);
+    };
+  }, [username]);
 
   const handleSignUp = async (e) => {
     e.preventDefault();
@@ -28,7 +50,7 @@ export const SignupPage = () => {
     }
     setBusy(true);
     try {
-      await signup({ name, email, password, role, inviteCode });
+      await signup({ name, username, email, password, role, inviteCode });
       navigate("/");
     } catch (err) {
       setError(err.message);
@@ -39,6 +61,7 @@ export const SignupPage = () => {
 
   return (
     <AuthShell title="Sign up">
+      <SocialButtons />
       <form className="auth-fields" onSubmit={handleSignUp}>
         <Field
           label="Name"
@@ -48,6 +71,18 @@ export const SignupPage = () => {
           placeholder="Your name"
           value={name}
           onChange={(e) => setName(e.target.value)}
+          required
+        />
+        <Field
+          label="Username"
+          id="signup-username"
+          type="text"
+          autoComplete="username"
+          placeholder="e.g. kiah_dev"
+          hint={(username && usernameNote) || "3-30 characters: lowercase letters, numbers, underscores. This will be your public handle."}
+          value={username}
+          onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s/g, ""))}
+          maxLength={30}
           required
         />
         <Field

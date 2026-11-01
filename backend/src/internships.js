@@ -45,17 +45,17 @@ export function parseListQuery(q) {
  */
 export function buildFilters(f) {
   const where = [
-    "(i.is_active = 1 OR a.id IS NOT NULL)",
-    "(i.deadline IS NULL OR i.deadline >= CURDATE() OR a.id IS NOT NULL)",
+    "(i.is_active OR a.id IS NOT NULL)",
+    "(i.deadline IS NULL OR i.deadline >= CURRENT_DATE OR a.id IS NOT NULL)",
   ];
   const params = [];
   const add = (clause, ...values) => { where.push(clause); params.push(...values); };
 
   if (f.q) {
     const like = `%${f.q.replace(/[\\%_]/g, "\\$&")}%`;
-    add("(i.company LIKE ? OR i.role LIKE ? OR i.location LIKE ?)", like, like, like);
+    add("(i.company ILIKE ? OR i.role ILIKE ? OR i.location ILIKE ?)", like, like, like);
   }
-  if (f.modes.length) add("i.work_mode IN (?)", f.modes);
+  if (f.modes.length) add("i.work_mode = ANY(?)", f.modes);
   if (f.pay === "paid") add(`${PAID} > 0`);
   if (f.pay === "unpaid") add(`${PAID} = 0`);
   if (f.minStipend) add(`${PAID} >= ?`, f.minStipend);
@@ -63,14 +63,14 @@ export function buildFilters(f) {
   if (f.maxMonths !== null) add("i.duration_months <= ?", f.maxMonths);
   if (f.batch) add("(i.batch_year IS NULL OR i.batch_year = ?)", f.batch);
   if (f.cgpa !== null) add("(i.min_cgpa IS NULL OR i.min_cgpa <= ?)", f.cgpa);
-  if (f.branch) add("(i.branches IS NULL OR i.branches = '' OR FIND_IN_SET(?, i.branches))", f.branch);
+  if (f.branch) add("(i.branches IS NULL OR i.branches = '' OR ? = ANY(string_to_array(i.branches, ',')))", f.branch);
   return { where, params };
 }
 
 const orderFor = (sort, hasCoords) => {
-  const newest = "i.posted_at IS NULL, i.posted_at DESC, i.id DESC";
-  if (sort === "deadline") return `i.deadline IS NULL, i.deadline ASC, ${newest}`;
-  if ((sort === "nearest" || sort === "match") && hasCoords) return `distance IS NULL, distance ASC, ${newest}`;
+  const newest = "i.posted_at DESC NULLS LAST, i.id DESC";
+  if (sort === "deadline") return `i.deadline ASC NULLS LAST, ${newest}`;
+  if ((sort === "nearest" || sort === "match") && hasCoords) return `distance ASC NULLS LAST, ${newest}`;
   return newest;
 };
 
@@ -98,7 +98,7 @@ const toListItem = (r, skills) => {
 };
 
 const LIST_COLUMNS = `i.id, i.company, i.role, i.location, i.url, i.source, i.description, i.posted_at,
-  DATE_FORMAT(i.deadline, '%Y-%m-%d') AS deadline, i.work_mode, i.stipend_min, i.stipend_max,
+  to_char(i.deadline, 'YYYY-MM-DD') AS deadline, i.work_mode, i.stipend_min, i.stipend_max,
   i.duration_months, i.min_cgpa, i.batch_year, i.branches`;
 
 // Fields a poster fills in. Returns { error } or the cleaned values.
@@ -208,10 +208,11 @@ export function mountInternships(app) {
     const [rows] = await pool.query("SELECT company, role FROM internships WHERE id = ?", [req.params.id]);
     if (!rows[0]) return res.status(404).json({ error: "Internship not found" });
     await pool.query(
-      `INSERT IGNORE INTO applications (user_id, internship_id, title, status, resume_id, resume_file_name)
-       SELECT ?, ?, ?, 'Applied', r.id, r.file_name
+      `INSERT INTO applications (user_id, internship_id, title, status, resume_id, resume_file_name)
+       SELECT ?::int, ?::int, ?::text, 'Applied', r.id, r.file_name
        FROM (SELECT 1) one
-       LEFT JOIN resumes r ON r.user_id = ? AND r.is_current = 1 AND r.kind = 'resume'`,
+       LEFT JOIN resumes r ON r.user_id = ? AND r.is_current AND r.kind = 'resume'
+       ON CONFLICT (user_id, internship_id) DO NOTHING`,
       [req.userId, req.params.id, `${rows[0].role} – ${rows[0].company}`, req.userId],
     );
     res.status(201).json({ applied: true });
@@ -229,7 +230,7 @@ export function mountInternships(app) {
     const f = internshipFields(req.body);
     if (f.error) return res.status(400).json({ error: f.error });
     const [result] = await pool.query(
-      `INSERT INTO internships (${COLS.join(", ")}, source, posted_at, posted_by) VALUES (${COLS.map(() => "?").join(", ")}, 'manual', NOW(), ?)`,
+      `INSERT INTO internships (${COLS.join(", ")}, source, posted_at, posted_by) VALUES (${COLS.map(() => "?").join(", ")}, 'manual', NOW(), ?) RETURNING id`,
       [...COLS.map((c) => f[c]), req.userId],
     );
     res.status(201).json({ id: result.insertId });

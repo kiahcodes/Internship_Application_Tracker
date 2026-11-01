@@ -2,12 +2,13 @@ import { useState } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { AuthShell } from "../components/AuthShell";
 import { Alert, Button, Field } from "../components/ui";
+import { SocialButtons } from "../components/SocialButtons";
 import { login } from "../utils/auth";
 
 export const LoginPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -17,7 +18,7 @@ export const LoginPage = () => {
     setError("");
     setBusy(true);
     try {
-      await login({ email, password });
+      await login({ identifier, password });
       navigate(location.state?.from || "/", { replace: true });
     } catch (err) {
       setError(err.message);
@@ -28,15 +29,16 @@ export const LoginPage = () => {
 
   return (
     <AuthShell title="Sign in">
+      <SocialButtons />
       <form className="auth-fields" onSubmit={handleSignIn}>
         <Field
-          label="Email"
-          id="login-email"
-          type="email"
-          autoComplete="email"
-          placeholder="you@example.com"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          label="Email or username"
+          id="login-identifier"
+          type="text"
+          autoComplete="username"
+          placeholder="you@example.com or your_username"
+          value={identifier}
+          onChange={(e) => setIdentifier(e.target.value)}
           required
         />
         <Field

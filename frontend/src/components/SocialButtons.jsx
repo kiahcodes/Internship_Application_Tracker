@@ -1,0 +1,74 @@
+import { useState } from "react";
+import { Alert, Button } from "./ui";
+import { socialLoginConfigured, supabase } from "../utils/supabase";
+
+const PROVIDERS = [
+  {
+    id: "google",
+    label: "Google",
+    icon: (
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+        <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5a5.6 5.6 0 0 1-2.4 3.7v3h3.9c2.3-2.1 3.5-5.2 3.5-8.9z" />
+        <path fill="#34A853" d="M12 24c3.2 0 6-1.1 8-2.9l-3.9-3c-1.1.7-2.5 1.2-4.1 1.2-3.1 0-5.8-2.1-6.7-5H1.3v3.1A12 12 0 0 0 12 24z" />
+        <path fill="#FBBC05" d="M5.3 14.3a7.2 7.2 0 0 1 0-4.6V6.6H1.3a12 12 0 0 0 0 10.8l4-3.1z" />
+        <path fill="#EA4335" d="M12 4.8c1.8 0 3.3.6 4.6 1.8l3.4-3.4A12 12 0 0 0 1.3 6.6l4 3.1c.9-2.8 3.6-4.9 6.7-4.9z" />
+      </svg>
+    ),
+  },
+  {
+    id: "github",
+    label: "GitHub",
+    icon: (
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+        <path fill="currentColor" d="M12 .5a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.7-.3-5.5-1.3-5.5-6 0-1.2.5-2.3 1.3-3.1-.1-.4-.6-1.6.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.7 1.6.2 2.8.1 3.2.8.8 1.3 1.9 1.3 3.1 0 4.6-2.8 5.7-5.5 6 .4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .5z" />
+      </svg>
+    ),
+  },
+  {
+    id: "linkedin_oidc",
+    label: "LinkedIn",
+    icon: (
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+        <path fill="#0A66C2" d="M20.4 20.5h-3.6v-5.6c0-1.3 0-3-1.8-3s-2.1 1.4-2.1 2.9v5.7H9.3V9h3.4v1.6c.5-.9 1.6-1.8 3.4-1.8 3.6 0 4.3 2.4 4.3 5.5v6.2zM5.300 7.400a2.1 2.1 0 1 1 0-4.2 2.1 2.1 0 0 1 0 4.2zM7.100 20.500H3.500V9h3.600v11.500z" />
+      </svg>
+    ),
+  },
+];
+
+/** "Continue with …" buttons. Sends the browser to the provider, then back to /auth/callback. */
+export function SocialButtons() {
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState("");
+
+  const start = async (provider) => {
+    setError("");
+    if (!socialLoginConfigured) {
+      setError("Social sign-in isn't set up yet (missing VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).");
+      return;
+    }
+    setBusy(provider);
+    const { error: err } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
+    });
+    if (err) {
+      setError(err.message);
+      setBusy("");
+    }
+  };
+
+  return (
+    <div className="social-auth">
+      <div className="social-buttons">
+        {PROVIDERS.map((p) => (
+          <Button key={p.id} variant="ghost" className="social-btn" block loading={busy === p.id} onClick={() => start(p.id)}>
+            {p.icon}
+            Continue with {p.label}
+          </Button>
+        ))}
+      </div>
+      <Alert>{error}</Alert>
+      <div className="social-divider"><span>or</span></div>
+    </div>
+  );
+}

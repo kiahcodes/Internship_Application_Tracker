@@ -18,7 +18,7 @@ test("eligibility treats 'no rule' as open to everyone, stipend does not", () =>
   const sql = where.join(" AND ");
   assert.match(sql, /i\.min_cgpa IS NULL OR i\.min_cgpa <= \?/);
   assert.match(sql, /i\.batch_year IS NULL OR i\.batch_year = \?/);
-  assert.match(sql, /FIND_IN_SET/);
+  assert.match(sql, /string_to_array/);
   assert.match(sql, /COALESCE\(i\.stipend_max, i\.stipend_min\) >= \?/);
 });
 
@@ -28,7 +28,7 @@ test("search text is escaped so % and _ are literal", () => {
 });
 
 test("expired postings are hidden unless the student tracks them", () => {
-  assert.match(buildFilters(parseListQuery({})).where.join(" "), /deadline >= CURDATE\(\) OR a\.id IS NOT NULL/);
+  assert.match(buildFilters(parseListQuery({})).where.join(" "), /deadline >= CURRENT_DATE OR a\.id IS NOT NULL/);
 });
 
 test("posting fields are validated and normalised", () => {

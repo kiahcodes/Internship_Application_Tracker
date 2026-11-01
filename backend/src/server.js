@@ -4,7 +4,10 @@ import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
 import multer from "multer";
 import "dotenv/config";
-import { pool } from "./db.js";
+import { pool, isUniqueViolation } from "./db.js";
+import { uploadFile, downloadFile, removeFiles } from "./storage.js";
+import { normalizeUsername, usernameError } from "./username.js";
+import { identityFromToken, suggestUsername } from "./oauth.js";
 import { computeAnalytics } from "./analytics.js";
 import { mountPrep } from "./prep.js";
 import { mountInternships } from "./internships.js";
@@ -35,10 +38,14 @@ const h = (fn) => (req, res, next) => fn(req, res, next).catch(next);
 const publicUser = (u) => ({
   id: u.id,
   name: u.name,
+  username: u.username,
   email: u.email,
   role: u.role,
   permissions: PERMISSIONS[u.role],
 });
+
+// Used by the host's health check (and handy for waking a sleeping free instance).
+app.get("/api/health", (req, res) => res.json({ ok: true }));
 
 // ---------- Auth ----------
 const sameSecret = (a, b) => {
@@ -48,7 +55,7 @@ const sameSecret = (a, b) => {
 const byIp = (req) => req.ip;
 const loginLimit = rateLimit({
   windowMs: 15 * 60 * 1000, max: 10,
-  key: (req) => `${req.ip}|${String(req.body?.email || "").toLowerCase()}`,
+  key: (req) => `${req.ip}|${String(req.body?.identifier ?? req.body?.email ?? "").toLowerCase()}`,
   message: "Too many sign-in attempts. Please wait a few minutes and try again.",
 });
 const resetLimit = rateLimit({
@@ -59,9 +66,12 @@ const resetLimit = rateLimit({
 app.post("/api/auth/signup", h(async (req, res) => {
   const name = String(req.body.name || "").trim();
   const email = String(req.body.email || "").trim().toLowerCase();
+  const username = normalizeUsername(req.body.username);
   const password = String(req.body.password || "");
   const role = req.body.role === "poster" ? "poster" : "student";
   if (!name) return res.status(400).json({ error: "Name is required" });
+  const badUsername = usernameError(username);
+  if (badUsername) return res.status(400).json({ error: badUsername });
   if (!EMAIL_RE.test(email)) return res.status(400).json({ error: "Enter a valid email" });
   if (password.length < 6)
     return res.status(400).json({ error: "Password must be at least 6 characters" });
@@ -74,26 +84,88 @@ app.post("/api/auth/signup", h(async (req, res) => {
       return res.status(403).json({ error: "That invite code isn't right" });
   }
 
-  const [existing] = await pool.query("SELECT id FROM users WHERE email = ?", [email]);
-  if (existing.length) return res.status(409).json({ error: "That email is already registered" });
-
   const hash = await bcrypt.hash(password, 10);
-  const [result] = await pool.query(
-    "INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)",
-    [name, email, hash, role],
-  );
-  await pool.query("INSERT INTO profiles (user_id) VALUES (?)", [result.insertId]);
-  const user = publicUser({ id: result.insertId, name, email, role });
+  const conn = await pool.getConnection();
+  let id;
+  try {
+    await conn.beginTransaction();
+    // The unique constraints are the real guard, so two simultaneous sign-ups can't both win.
+    [{ insertId: id }] = await conn.query(
+      "INSERT INTO users (name, username, email, password_hash, role) VALUES (?, ?, ?, ?, ?) RETURNING id",
+      [name, username, email, hash, role],
+    );
+    await conn.query("INSERT INTO profiles (user_id) VALUES (?)", [id]);
+    await conn.commit();
+  } catch (err) {
+    await conn.rollback().catch(() => {});
+    if (isUniqueViolation(err, "users_email_key")) return res.status(409).json({ error: "That email is already registered" });
+    if (isUniqueViolation(err, "uq_users_username")) return res.status(409).json({ error: "That username is taken" });
+    throw err;
+  } finally {
+    conn.release();
+  }
+  const user = publicUser({ id, name, username, email, role });
   res.status(201).json({ token: signToken(user), user });
 }));
 
+// Sign in / sign up with Google, GitHub or LinkedIn. The browser signs in through Supabase Auth and
+// sends us the resulting access token; we verify it and issue our own session token as usual.
+// An existing account with the same verified email is signed in; a new one needs a username first.
+app.post("/api/auth/oauth", h(async (req, res) => {
+  const identity = await identityFromToken(String(req.body.accessToken || ""));
+  if (!identity) return res.status(401).json({ error: "Couldn't verify that sign-in. Please try again." });
+
+  const [rows] = await pool.query("SELECT * FROM users WHERE email = ?", [identity.email]);
+  if (rows[0]) return res.json({ token: signToken(rows[0]), user: publicUser(rows[0]) });
+
+  const username = normalizeUsername(req.body.username);
+  if (!username) {
+    return res.json({ needsUsername: true, name: identity.name, email: identity.email, suggestedUsername: await suggestUsername(identity.handle) });
+  }
+  const badUsername = usernameError(username);
+  if (badUsername) return res.status(400).json({ error: badUsername });
+
+  // Social accounts have no password; store a random hash nobody can match. "Forgot password" can set one later.
+  const hash = await bcrypt.hash(crypto.randomBytes(32).toString("hex"), 10);
+  const conn = await pool.getConnection();
+  let id;
+  try {
+    await conn.beginTransaction();
+    [{ insertId: id }] = await conn.query(
+      "INSERT INTO users (name, username, email, password_hash, role) VALUES (?, ?, ?, ?, 'student') RETURNING id",
+      [identity.name, username, identity.email, hash],
+    );
+    await conn.query("INSERT INTO profiles (user_id) VALUES (?)", [id]);
+    await conn.commit();
+  } catch (err) {
+    await conn.rollback().catch(() => {});
+    if (isUniqueViolation(err, "uq_users_username")) return res.status(409).json({ error: "That username is taken" });
+    if (isUniqueViolation(err, "users_email_key")) return res.status(409).json({ error: "That email is already registered" });
+    throw err;
+  } finally {
+    conn.release();
+  }
+  const user = publicUser({ id, name: identity.name, username, email: identity.email, role: "student" });
+  res.status(201).json({ token: signToken(user), user });
+}));
+
+// Live check for the sign-up form. Also used by the profile page when changing a username.
+app.get("/api/auth/username-available", h(async (req, res) => {
+  const username = normalizeUsername(req.query.u);
+  const error = usernameError(username);
+  if (error) return res.json({ available: false, reason: error });
+  const [rows] = await pool.query("SELECT 1 FROM users WHERE lower(username) = ?", [username]);
+  res.json({ available: rows.length === 0, reason: rows.length ? "That username is taken" : null });
+}));
+
 app.post("/api/auth/login", loginLimit, h(async (req, res) => {
-  const email = String(req.body.email || "").trim().toLowerCase();
+  // Signs in with either the email or the username.
+  const who = normalizeUsername(req.body.identifier ?? req.body.email);
   const password = String(req.body.password || "");
-  const [rows] = await pool.query("SELECT * FROM users WHERE email = ?", [email]);
+  const [rows] = await pool.query("SELECT * FROM users WHERE email = ? OR username = ?", [who, who]);
   const user = rows[0];
   if (!user || !(await bcrypt.compare(password, user.password_hash)))
-    return res.status(401).json({ error: "Invalid email or password" });
+    return res.status(401).json({ error: "Invalid email/username or password" });
   res.json({ token: signToken(user), user: publicUser(user) });
 }));
 
@@ -108,7 +180,7 @@ app.post("/api/auth/forgot", resetLimit, h(async (req, res) => {
     const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
     await pool.query("UPDATE password_resets SET used_at = NOW() WHERE user_id = ? AND used_at IS NULL", [rows[0].id]);
     await pool.query(
-      "INSERT INTO password_resets (user_id, token_hash, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 30 MINUTE))",
+      "INSERT INTO password_resets (user_id, token_hash, expires_at) VALUES (?, ?, NOW() + INTERVAL '30 minutes')",
       [rows[0].id, tokenHash],
     );
     const base = process.env.APP_URL || "http://localhost:5173";
@@ -138,7 +210,7 @@ app.post("/api/auth/reset", resetLimit, h(async (req, res) => {
 }));
 
 app.get("/api/auth/me", requireAuth, h(async (req, res) => {
-  const [rows] = await pool.query("SELECT id, name, email, role FROM users WHERE id = ?", [req.userId]);
+  const [rows] = await pool.query("SELECT id, name, username, email, role FROM users WHERE id = ?", [req.userId]);
   res.json(publicUser(rows[0]));
 }));
 
@@ -151,6 +223,7 @@ app.delete("/api/account", requireAuth, h(async (req, res) => {
   if (!rows[0] || !(await bcrypt.compare(password, rows[0].password_hash)))
     return res.status(403).json({ error: "That password isn't right" });
 
+  const [files] = await pool.query("SELECT storage_path FROM resumes WHERE user_id = ?", [req.userId]);
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
@@ -163,12 +236,13 @@ app.delete("/api/account", requireAuth, h(async (req, res) => {
   } finally {
     conn.release();
   }
+  await removeFiles(files.map((f) => f.storage_path));
   res.status(204).end();
 }));
 
 // ---------- Profile ----------
 const profileQuery = `
-  SELECT u.name, u.email, p.course, p.semester, p.bio, p.skills, p.branch, p.grad_year, p.cgpa,
+  SELECT u.name, u.username, u.email, p.course, p.semester, p.bio, p.skills, p.branch, p.grad_year, p.cgpa,
          p.phone, p.github, p.linkedin, p.portfolio, p.preferred_locations
   FROM users u LEFT JOIN profiles p ON p.user_id = u.id WHERE u.id = ?`;
 
@@ -200,10 +274,10 @@ app.put("/api/profile", requireAuth, h(async (req, res) => {
   await pool.query(
     `INSERT INTO profiles (user_id, course, semester, bio, skills, branch, grad_year, cgpa, phone, github, linkedin, portfolio, preferred_locations)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-     ON DUPLICATE KEY UPDATE course = VALUES(course), semester = VALUES(semester), bio = VALUES(bio),
-       skills = VALUES(skills), branch = VALUES(branch), grad_year = VALUES(grad_year), cgpa = VALUES(cgpa),
-       phone = VALUES(phone), github = VALUES(github), linkedin = VALUES(linkedin),
-       portfolio = VALUES(portfolio), preferred_locations = VALUES(preferred_locations)`,
+     ON CONFLICT (user_id) DO UPDATE SET course = EXCLUDED.course, semester = EXCLUDED.semester, bio = EXCLUDED.bio,
+       skills = EXCLUDED.skills, branch = EXCLUDED.branch, grad_year = EXCLUDED.grad_year, cgpa = EXCLUDED.cgpa,
+       phone = EXCLUDED.phone, github = EXCLUDED.github, linkedin = EXCLUDED.linkedin,
+       portfolio = EXCLUDED.portfolio, preferred_locations = EXCLUDED.preferred_locations`,
     [req.userId, v.course, v.semester, v.bio, v.skills, v.branch, v.grad_year, v.cgpa, v.phone,
      v.github, v.linkedin, v.portfolio, v.preferred_locations],
   );
@@ -219,8 +293,8 @@ const CARD_SELECT = `
   SELECT a.id, a.internship_id, a.title, a.status, a.resume_id, a.cover_letter, a.cover_letter_id,
          COALESCE(r.file_name, a.resume_file_name) AS resume_name, cl.file_name AS cover_letter_name,
          i.company, i.role, i.description, i.url AS posting_url,
-         COALESCE(DATE_FORMAT(i.deadline, '%Y-%m-%d'), DATE_FORMAT(a.deadline, '%Y-%m-%d')) AS deadline,
-         DATE_FORMAT(a.remind_on, '%Y-%m-%d') AS remind_on
+         COALESCE(to_char(i.deadline, 'YYYY-MM-DD'), to_char(a.deadline, 'YYYY-MM-DD')) AS deadline,
+         to_char(a.remind_on, 'YYYY-MM-DD') AS remind_on
   FROM applications a
   LEFT JOIN resumes r ON r.id = a.resume_id
   LEFT JOIN resumes cl ON cl.id = a.cover_letter_id
@@ -257,9 +331,9 @@ app.get("/api/tracker/export", requireAuth, h(async (req, res) => {
   const [rows] = await pool.query(
     `SELECT a.title, a.status, i.company, i.role, COALESCE(r.file_name, a.resume_file_name) AS resume,
             (a.cover_letter IS NOT NULL OR a.cover_letter_id IS NOT NULL) AS letter,
-            DATE_FORMAT(a.created_at, '%Y-%m-%d') AS applied_on,
-            COALESCE(DATE_FORMAT(i.deadline, '%Y-%m-%d'), DATE_FORMAT(a.deadline, '%Y-%m-%d')) AS deadline,
-            DATE_FORMAT(a.remind_on, '%Y-%m-%d') AS remind_on, i.url
+            to_char(a.created_at, 'YYYY-MM-DD') AS applied_on,
+            COALESCE(to_char(i.deadline, 'YYYY-MM-DD'), to_char(a.deadline, 'YYYY-MM-DD')) AS deadline,
+            to_char(a.remind_on, 'YYYY-MM-DD') AS remind_on, i.url
      FROM applications a
      LEFT JOIN resumes r ON r.id = a.resume_id
      LEFT JOIN internships i ON i.id = a.internship_id
@@ -301,7 +375,7 @@ app.post("/api/tracker/import", requireAuth, express.text({ type: ["text/csv", "
       for (const r of fresh) {
         await conn.query(
           `INSERT INTO applications (user_id, title, status, deadline, remind_on, created_at)
-           VALUES (?, ?, ?, ?, ?, COALESCE(CONCAT(?, ' 12:00:00'), NOW()))`,
+           VALUES (?, ?, ?, ?, ?, COALESCE((?::text || ' 12:00:00')::timestamptz, NOW()))`,
           [req.userId, r.title, r.status, r.deadline, r.remind_on, r.applied_on],
         );
       }
@@ -329,9 +403,10 @@ app.post("/api/tracker", requireAuth, h(async (req, res) => {
   if (!STATUSES.includes(status)) return res.status(400).json({ error: "Invalid status" });
   const [result] = await pool.query(
     `INSERT INTO applications (user_id, title, status, resume_id, resume_file_name)
-     SELECT ?, ?, ?, r.id, r.file_name
+     SELECT ?::int, ?::text, ?::text, r.id, r.file_name
      FROM (SELECT 1) one
-     LEFT JOIN resumes r ON r.user_id = ? AND r.is_current = 1 AND r.kind = 'resume'`,
+     LEFT JOIN resumes r ON r.user_id = ? AND r.is_current AND r.kind = 'resume'
+     RETURNING id`,
     [req.userId, title.slice(0, 255), status, req.userId],
   );
   const [rows] = await pool.query(`${CARD_SELECT} WHERE a.id = ?`, [result.insertId]);
@@ -425,7 +500,7 @@ app.get("/api/analytics", requireAuth, h(async (req, res) => {
     [req.userId],
   );
   const [events] = await pool.query(
-    "SELECT application_id, status, at FROM application_events WHERE user_id = ? ORDER BY at",
+    "SELECT application_id, status, changed_at AS at FROM application_events WHERE user_id = ? ORDER BY changed_at",
     [req.userId],
   );
   res.json(computeAnalytics(apps, events));
@@ -456,28 +531,36 @@ function mountFiles(base, kind, label, maxVersions) {
     const file = req.file;
     if (!file) return res.status(400).json({ error: "No file uploaded" });
 
+    // The file goes to Supabase Storage under an opaque key; the original name stays in the row.
+    const storagePath = `${req.userId}/${crypto.randomUUID()}`;
+    await uploadFile(storagePath, file.buffer, file.mimetype);
+
     const conn = await pool.getConnection();
+    let pruned = [];
     try {
       await conn.beginTransaction();
-      await conn.query("UPDATE resumes SET is_current = 0 WHERE user_id = ? AND kind = ?", [req.userId, kind]);
+      await conn.query("UPDATE resumes SET is_current = FALSE WHERE user_id = ? AND kind = ?", [req.userId, kind]);
       const [result] = await conn.query(
-        `INSERT INTO resumes (user_id, file_name, mime_type, file_size, data, is_current, kind)
-         VALUES (?, ?, ?, ?, ?, 1, ?)`,
-        [req.userId, file.originalname, file.mimetype, file.size, file.buffer, kind],
+        `INSERT INTO resumes (user_id, file_name, mime_type, file_size, storage_path, is_current, kind)
+         VALUES (?, ?, ?, ?, ?, TRUE, ?) RETURNING id`,
+        [req.userId, file.originalname, file.mimetype, file.size, storagePath, kind],
       );
       // Keep only the newest versions of this kind.
-      await conn.query(
+      [{ rows: pruned }] = await conn.query(
         `DELETE FROM resumes WHERE user_id = ? AND kind = ? AND id NOT IN (
-           SELECT id FROM (SELECT id FROM resumes WHERE user_id = ? AND kind = ?
-                           ORDER BY uploaded_at DESC, id DESC LIMIT ?) keep)`,
+           SELECT id FROM resumes WHERE user_id = ? AND kind = ?
+           ORDER BY uploaded_at DESC, id DESC LIMIT ?)
+         RETURNING storage_path`,
         [req.userId, kind, req.userId, kind, maxVersions],
       );
       await conn.commit();
+      await removeFiles(pruned.map((r) => r.storage_path));
       const [rows] = await pool.query(`SELECT ${fileCols} FROM resumes WHERE id = ?`, [result.insertId]);
       res.status(201).json(toFile(rows[0]));
     } catch (err) {
       // The connection may already be dead; don't let that hide the real error.
       await conn.rollback().catch(() => {});
+      await removeFiles([storagePath]);
       throw err;
     } finally {
       conn.release();
@@ -497,15 +580,16 @@ function mountFiles(base, kind, label, maxVersions) {
   }));
 
   app.delete(`${base}/:id`, requireAuth, h(async (req, res) => {
-    await pool.query("DELETE FROM resumes WHERE id = ? AND user_id = ? AND kind = ?", [
-      req.params.id, req.userId, kind,
-    ]);
+    const [{ rows: removed }] = await pool.query(
+      "DELETE FROM resumes WHERE id = ? AND user_id = ? AND kind = ? RETURNING storage_path",
+      [req.params.id, req.userId, kind],
+    );
+    await removeFiles(removed.map((r) => r.storage_path));
     // If the current one was removed, promote the newest remaining version.
     await pool.query(
-      `UPDATE resumes SET is_current = 1 WHERE user_id = ? AND kind = ? AND id = (
-         SELECT id FROM (SELECT id FROM resumes WHERE user_id = ? AND kind = ?
-                         ORDER BY uploaded_at DESC, id DESC LIMIT 1) newest)
-       AND NOT EXISTS (SELECT 1 FROM (SELECT id FROM resumes WHERE user_id = ? AND kind = ? AND is_current = 1) cur)`,
+      `UPDATE resumes SET is_current = TRUE WHERE user_id = ? AND kind = ? AND id = (
+         SELECT id FROM resumes WHERE user_id = ? AND kind = ? ORDER BY uploaded_at DESC, id DESC LIMIT 1)
+       AND NOT EXISTS (SELECT 1 FROM resumes WHERE user_id = ? AND kind = ? AND is_current)`,
       [req.userId, kind, req.userId, kind, req.userId, kind],
     );
     res.status(204).end();
@@ -515,17 +599,18 @@ function mountFiles(base, kind, label, maxVersions) {
   // so an uploaded HTML file can never run in the page.
   app.get(`${base}/:id/download`, requireAuth, h(async (req, res) => {
     const [rows] = await pool.query(
-      "SELECT file_name, mime_type, data FROM resumes WHERE id = ? AND user_id = ? AND kind = ?",
+      "SELECT file_name, mime_type, storage_path FROM resumes WHERE id = ? AND user_id = ? AND kind = ?",
       [req.params.id, req.userId, kind],
     );
     if (!rows[0]) return res.status(404).json({ error: `${label} not found` });
+    const data = await downloadFile(rows[0].storage_path);
     const inline = req.query.inline === "1" && isPdf(rows[0]);
     res.set({
       "Content-Type": inline ? "application/pdf" : rows[0].mime_type,
       "Content-Disposition": `${inline ? "inline" : "attachment"}; filename*=UTF-8''${encodeURIComponent(rows[0].file_name)}`,
       "X-Content-Type-Options": "nosniff",
     });
-    res.send(rows[0].data);
+    res.send(data);
   }));
 }
 
@@ -540,8 +625,14 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: "Something went wrong on the server" });
 });
 
-const port = process.env.PORT || 5000;
-app.listen(port, () => {
-  console.log(`API listening on http://localhost:${port}`);
-  if (process.env.SCRAPER_ENABLED === "true") startScraperSchedule();
-});
+// Vercel runs the exported app as a serverless function, so there is no port to listen on and no
+// process to keep the scraper's cron timer alive. Locally (`npm run dev`) we start both as before.
+if (!process.env.VERCEL) {
+  const port = process.env.PORT || 5000;
+  app.listen(port, () => {
+    console.log(`API listening on http://localhost:${port}`);
+    if (process.env.SCRAPER_ENABLED === "true") startScraperSchedule();
+  });
+}
+
+export default app;

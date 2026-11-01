@@ -7,6 +7,7 @@ import { Profile } from "./pages/Profile.jsx";
 import { LoginPage } from "./pages/LoginPage.jsx";
 import { SignupPage } from "./pages/SignupPage.jsx";
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage.jsx";
+import { AuthCallbackPage } from "./pages/AuthCallbackPage.jsx";
 import { ResetPasswordPage } from "./pages/ResetPasswordPage.jsx";
 import { Tracker } from "./pages/Tracker.jsx";
 import { Documents } from "./pages/Documents.jsx";
@@ -25,6 +26,7 @@ function App() {
         <Route path="/home" element={<Navigate to="/" replace />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
+        <Route path="/auth/callback" element={<AuthCallbackPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/internships" element={<ProtectedRoute><Internship /></ProtectedRoute>} />

@@ -44,16 +44,24 @@ Start the development server using:
 
 npm run dev
 
-## Backend (Node.js + MySQL)
+## Backend (Node.js + Supabase)
 
-Data is stored in MySQL (XAMPP) behind an Express API in `backend/`.
+Data lives in Supabase (Postgres) behind an Express API in `backend/`; resumes and cover letters are files in a private Supabase Storage bucket.
 
-1. Start MySQL from XAMPP (`sudo /opt/lampp/lampp startmysql`).
-2. `cd backend && npm install && cp .env.example .env` (edit `.env` if your MySQL credentials differ).
-3. `npm run db:init` creates the `internship_tracker` database, tables and seed internships.
+1. Create a project at supabase.com.
+2. `cd backend && npm install && cp .env.example .env`, then fill in `DATABASE_URL` (Session pooler string), `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` (Project Settings -> API).
+3. `npm run db:init` creates the tables, seed internships and the `resumes` storage bucket.
 4. `npm run dev` starts the API on http://localhost:5000.
-5. In `frontend/`, `npm run dev` — Vite proxies `/api` to the backend.
+5. In `frontend/`, `npm run dev` - Vite proxies `/api` to the backend.
 
-Resumes are stored as BLOBs (max 4MB). XAMPP's default `max_allowed_packet` is 1MB;
-`db:init` raises it until MySQL restarts. To make it permanent add
-`max_allowed_packet=16M` under `[mysqld]` in `/opt/lampp/etc/my.cnf`.
+Every user has a unique, lowercase `username` (3-30 chars: a-z, 0-9, `_`), chosen at sign-up.
+
+### Social sign-in (Google, GitHub, LinkedIn)
+
+Handled by Supabase Auth; the API then issues its normal session. Setup:
+
+1. Supabase dashboard -> *Authentication -> Providers*: enable **Google**, **GitHub** and **LinkedIn (OIDC)**, pasting each provider's client ID and secret. Each provider's "callback / redirect URL" is `https://<project-ref>.supabase.co/auth/v1/callback`.
+2. *Authentication -> URL Configuration*: set Site URL to `http://localhost:5173` and add `http://localhost:5173/auth/callback` to Redirect URLs (plus your deployed URL later).
+3. `cp frontend/.env.example frontend/.env` and fill in `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
+
+New social users pick a unique username on first sign-in; they are always created as students.

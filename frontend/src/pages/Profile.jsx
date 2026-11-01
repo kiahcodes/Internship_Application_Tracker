@@ -184,6 +184,7 @@ export function Profile() {
               <h1 className="p-name">{student.name}</h1>
               <p className="p-sub">{sub || "Add your course and semester"}</p>
               <ul className="p-contact">
+                {student.username && <li>@{student.username}</li>}
                 <li>{student.email}</li>
                 {student.phone && <li>{student.phone}</li>}
                 {LINKS.filter(([key]) => student[key]).map(([key, label]) => (

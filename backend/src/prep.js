@@ -58,10 +58,10 @@ export function mountPrep(app) {
     const [companies] = await pool.query(
       `SELECT c.id, c.name,
          (SELECT COUNT(*) FROM prep_items i WHERE i.company_id = c.id) AS items_total,
-         (SELECT COUNT(*) FROM prep_items i WHERE i.company_id = c.id AND i.done = 1) AS items_done,
+         (SELECT COUNT(*) FROM prep_items i WHERE i.company_id = c.id AND i.done) AS items_done,
          (SELECT COUNT(*) FROM interview_rounds r WHERE r.company_id = c.id) AS rounds,
          (SELECT COUNT(*) FROM interview_questions q WHERE q.company_id = c.id) AS questions,
-         (SELECT COUNT(*) FROM interview_questions q WHERE q.company_id = c.id AND q.next_review <= CURDATE()) AS due
+         (SELECT COUNT(*) FROM interview_questions q WHERE q.company_id = c.id AND q.next_review <= CURRENT_DATE) AS due
        FROM prep_companies c WHERE c.user_id = ? ORDER BY c.name`,
       [req.userId],
     );
@@ -90,7 +90,7 @@ export function mountPrep(app) {
     const name = clean(req.body.name);
     if (!name) return fail(res, 400, "Enter a company name");
     if (name.length > LIMITS.name) return fail(res, 400, `Company name is too long (max ${LIMITS.name} characters)`);
-    await pool.query("INSERT IGNORE INTO prep_companies (user_id, name) VALUES (?, ?)", [req.userId, name]);
+    await pool.query("INSERT INTO prep_companies (user_id, name) VALUES (?, ?) ON CONFLICT (user_id, name) DO NOTHING", [req.userId, name]);
     const [rows] = await pool.query("SELECT id, name FROM prep_companies WHERE user_id = ? AND name = ?", [req.userId, name]);
     res.status(201).json(rows[0]);
   }));
@@ -109,7 +109,7 @@ export function mountPrep(app) {
     const [items, links, rounds, questions] = await Promise.all([
       q("SELECT id, text, done FROM prep_items WHERE company_id = ? ORDER BY id"),
       q("SELECT id, title, url, kind FROM prep_links WHERE company_id = ? ORDER BY id"),
-      q("SELECT * FROM interview_rounds WHERE company_id = ? ORDER BY held_on IS NULL, held_on DESC, id DESC"),
+      q("SELECT * FROM interview_rounds WHERE company_id = ? ORDER BY held_on DESC NULLS LAST, id DESC"),
       q("SELECT * FROM interview_questions WHERE company_id = ? ORDER BY id"),
     ]);
     res.json({
@@ -147,7 +147,7 @@ export function mountPrep(app) {
     if (!text) return fail(res, 400, "Write the checklist item first");
     if (text.length > LIMITS.item) return fail(res, 400, `Keep it under ${LIMITS.item} characters`);
     if (!(await ownsCompany(req.userId, req.body.companyId))) return fail(res, 404, "Company not found");
-    const [r] = await pool.query("INSERT INTO prep_items (company_id, user_id, text) VALUES (?, ?, ?)", [
+    const [r] = await pool.query("INSERT INTO prep_items (company_id, user_id, text) VALUES (?, ?, ?) RETURNING id", [
       req.body.companyId, req.userId, text,
     ]);
     res.status(201).json({ id: r.insertId, text, done: false });
@@ -156,7 +156,7 @@ export function mountPrep(app) {
   app.patch("/api/prep/items/:id", auth, wrap(async (req, res) => {
     const sets = [];
     const params = [];
-    if (req.body.done !== undefined) { sets.push("done = ?"); params.push(req.body.done ? 1 : 0); }
+    if (req.body.done !== undefined) { sets.push("done = ?"); params.push(Boolean(req.body.done)); }
     if (req.body.text !== undefined) {
       const text = clean(req.body.text);
       if (!text || text.length > LIMITS.item) return fail(res, 400, "Item must be 1 to 300 characters");
@@ -185,7 +185,7 @@ export function mountPrep(app) {
     if (!isUrl(url) || url.length > LIMITS.url) return fail(res, 400, "Enter a full link starting with http:// or https://");
     if (!(await ownsCompany(req.userId, req.body.companyId))) return fail(res, 404, "Company not found");
     const [r] = await pool.query(
-      "INSERT INTO prep_links (company_id, user_id, title, url, kind) VALUES (?, ?, ?, ?, ?)",
+      "INSERT INTO prep_links (company_id, user_id, title, url, kind) VALUES (?, ?, ?, ?, ?) RETURNING id",
       [req.body.companyId, req.userId, title, url, kind],
     );
     res.status(201).json({ id: r.insertId, title, url, kind });
@@ -221,7 +221,7 @@ export function mountPrep(app) {
     if (error) return fail(res, 400, error);
     if (!(await ownsCompany(req.userId, req.body.companyId))) return fail(res, 404, "Company not found");
     const [r] = await pool.query(
-      "INSERT INTO interview_rounds (company_id, user_id, round_type, held_on, reflection) VALUES (?, ?, ?, ?, ?)",
+      "INSERT INTO interview_rounds (company_id, user_id, round_type, held_on, reflection) VALUES (?, ?, ?, ?, ?) RETURNING id",
       [req.body.companyId, req.userId, out.round_type, out.held_on ?? null, out.reflection ?? null],
     );
     const [rows] = await pool.query("SELECT * FROM interview_rounds WHERE id = ?", [r.insertId]);
@@ -260,7 +260,7 @@ export function mountPrep(app) {
     if (roundId !== null && !(await ownsRound(req.userId, companyId, roundId))) return fail(res, 404, "Round not found");
     const [r] = await pool.query(
       `INSERT INTO interview_questions (company_id, user_id, round_id, question, answer, next_review)
-       VALUES (?, ?, ?, ?, ?, CURDATE())`,
+       VALUES (?, ?, ?, ?, ?, CURRENT_DATE) RETURNING id`,
       [companyId, req.userId, roundId, question, answer.trim() ? answer : null],
     );
     const [rows] = await pool.query("SELECT * FROM interview_questions WHERE id = ?", [r.insertId]);
@@ -314,7 +314,7 @@ export function mountPrep(app) {
     const [rows] = await pool.query(
       `SELECT q.*, c.name AS company_name FROM interview_questions q
        JOIN prep_companies c ON c.id = q.company_id
-       WHERE q.user_id = ? ${scope} AND q.next_review <= CURDATE()
+       WHERE q.user_id = ? ${scope} AND q.next_review <= CURRENT_DATE
        ORDER BY q.box, q.next_review, q.id LIMIT 30`,
       params,
     );
@@ -333,8 +333,8 @@ export function mountPrep(app) {
     if (!q) return fail(res, 404, "Question not found");
     const box = req.body.result === "got" ? Math.min(q.box + 1, MAX_BOX) : 1;
     await pool.query(
-      `UPDATE interview_questions SET box = ?, last_reviewed = CURDATE(),
-         next_review = DATE_ADD(CURDATE(), INTERVAL ? DAY) WHERE id = ? AND user_id = ?`,
+      `UPDATE interview_questions SET box = ?, last_reviewed = CURRENT_DATE,
+         next_review = CURRENT_DATE + ?::int WHERE id = ? AND user_id = ?`,
       [box, BOX_DAYS[box], req.params.id, req.userId],
     );
     res.json({ box, nextInDays: BOX_DAYS[box] });

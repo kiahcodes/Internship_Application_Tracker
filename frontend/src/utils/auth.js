@@ -35,11 +35,35 @@ async function authRequest(path, body) {
   return saveSession(data);
 }
 
-export const login = ({ email, password }) =>
-  authRequest("login", { email, password });
+// `identifier` is an email or a username.
+export const login = ({ identifier, password }) =>
+  authRequest("login", { identifier, password });
 
-export const signup = ({ name, email, password, role, inviteCode }) =>
-  authRequest("signup", { name, email, password, role, inviteCode });
+export const signup = ({ name, username, email, password, role, inviteCode }) =>
+  authRequest("signup", { name, username, email, password, role, inviteCode });
+
+// Trades a Supabase access token (from a social sign-in) for our own session. For a brand-new
+// account the first call answers { needsUsername, suggestedUsername }; call again with `username`.
+export async function oauthExchange({ accessToken, username }) {
+  let res;
+  try {
+    res = await fetch("/api/auth/oauth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ accessToken, username }),
+    });
+  } catch {
+    throw new Error("Can't reach the server right now. Please check your connection and try again.");
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || "Something went wrong");
+  return data.needsUsername ? data : saveSession(data);
+}
+
+export async function checkUsername(username) {
+  const res = await fetch(`/api/auth/username-available?u=${encodeURIComponent(username)}`);
+  return res.json();
+}
 
 // These two don't sign you in, so they skip authRequest's session saving.
 async function plainRequest(path, body) {

@@ -1,0 +1,29 @@
+# Free backend on Render: https://render.com -> New -> Blueprint, pick this repo.
+services:
+  - type: web
+    name: internship-tracker-api
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_BUCKET
+        value: resumes
+      - key: JWT_SECRET
+        generateValue: true
+      - key: POSTER_INVITE_CODE
+        sync: false
+      - key: APP_URL
+        sync: false
+      # Render's free instance sleeps when idle, so a timer inside it would miss runs.
+      # The scraper runs from GitHub Actions instead (.github/workflows/scrape.yml).
+      - key: SCRAPER_ENABLED
+        value: "false"
