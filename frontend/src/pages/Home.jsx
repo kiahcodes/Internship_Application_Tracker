@@ -28,7 +28,12 @@ const PATHS = [
 ];
 
 const SAMPLE = [
-  { id: "v1", name: "Resume v1", detail: "General", sent: [{ to: "Lumen Health", stage: "Offer" }] },
+  {
+    id: "v1",
+    name: "Resume v1",
+    detail: "General",
+    sent: [{ to: "Lumen Health", stage: "Offer" }],
+  },
   {
     id: "v2",
     name: "Resume v2",
@@ -80,7 +85,12 @@ function ResumeStack({ versions, live }) {
 
   return (
     <div className="stack">
-      <div className="stack-tabs" role="tablist" aria-label="Resume versions" onKeyDown={onKeyDown}>
+      <div
+        className="stack-tabs"
+        role="tablist"
+        aria-label="Resume versions"
+        onKeyDown={onKeyDown}
+      >
         {versions.map((v, i) => (
           <button
             key={v.id}
@@ -97,9 +107,6 @@ function ResumeStack({ versions, live }) {
             {v.id}
           </button>
         ))}
-        <span className="stack-hint">
-          {live ? "Your latest resumes" : "Example. Sign in to see yours."}
-        </span>
       </div>
       <div
         className="stack-sheets"
@@ -110,13 +117,20 @@ function ResumeStack({ versions, live }) {
         {versions.map((v, i) => {
           const depth = (i - active + versions.length) % versions.length;
           return (
-            <article key={v.id} className="sheet" data-depth={depth} aria-hidden={depth !== 0}>
+            <article
+              key={v.id}
+              className="sheet"
+              data-depth={depth}
+              aria-hidden={depth !== 0}
+            >
               <header className="sheet-head">
                 <span className="sheet-name">{v.name}</span>
                 <span className="sheet-focus">{v.detail}</span>
               </header>
               <div className="sheet-lines" aria-hidden="true">
-                <i /><i /><i />
+                <i />
+                <i />
+                <i />
               </div>
               <p className="sheet-label">
                 {v.sent.length
@@ -127,7 +141,11 @@ function ResumeStack({ versions, live }) {
                 {v.sent.map((c, k) => (
                   <li key={`${c.to}-${k}`}>
                     <span>{c.to}</span>
-                    <mark className={`sheet-stage sheet-${c.stage.toLowerCase()}`}>{c.stage}</mark>
+                    <mark
+                      className={`sheet-stage sheet-${c.stage.toLowerCase()}`}
+                    >
+                      {c.stage}
+                    </mark>
                   </li>
                 ))}
               </ul>
@@ -140,9 +158,18 @@ function ResumeStack({ versions, live }) {
 }
 
 const STEPS = [
-  { title: "Upload each version", body: "Save a resume for every role type. The latest becomes your current one." },
-  { title: "Apply as usual", body: "Every application records the resume you sent, so there is nothing to note down." },
-  { title: "See what works", body: "Check which version got interviews and offers, and which company received it." },
+  {
+    title: "Upload each version",
+    body: "Save a resume for every role type. The latest becomes your current one.",
+  },
+  {
+    title: "Apply as usual",
+    body: "Every application records the resume you sent, so there is nothing to note down.",
+  },
+  {
+    title: "See what works",
+    body: "Check which version got interviews and offers, and which company received it.",
+  },
 ];
 
 function Feature({ data }) {
@@ -152,19 +179,26 @@ function Feature({ data }) {
     <section className="feature-wrap" aria-labelledby="feature-h">
       <div className="feature">
         <div className="feature-copy">
-          <h2 id="feature-h">Know exactly which resume went to which company.</h2>
+          <h2 id="feature-h">
+            Know exactly which resume went to which company.
+          </h2>
           <p>
-            Every version you upload is saved, and every application remembers the one you sent.
-            When an interview comes in, you can see which resume earned it.
+            Every version you upload is saved, and every application remembers
+            the one you sent. When an interview comes in, you can see which
+            resume earned it.
           </p>
-          <Link to="/documents" className="feature-go">Open resume tracking</Link>
+          <Link to="/documents" className="feature-go">
+            Open resume tracking
+          </Link>
         </div>
         <ResumeStack versions={versions} live={live} />
       </div>
       <ol className="steps">
         {STEPS.map((st, i) => (
           <li key={st.title}>
-            <span className="step-n" aria-hidden="true">{i + 1}</span>
+            <span className="step-n" aria-hidden="true">
+              {i + 1}
+            </span>
             <h3>{st.title}</h3>
             <p>{st.body}</p>
           </li>

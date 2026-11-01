@@ -1,7 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../utils/api";
-import { canPreview, coverLetterApi, formatUploadDate, resumeApi, resumeUsage } from "../utils/resume";
+import {
+  canPreview,
+  coverLetterApi,
+  formatUploadDate,
+  resumeApi,
+  resumeUsage,
+} from "../utils/resume";
 import { loadStudent } from "../utils/student";
 import { Alert, Button, EmptyState, Skeleton } from "../components/ui.jsx";
 import { CoverLetterDialog } from "../components/CoverLetterDialog.jsx";
@@ -19,10 +25,24 @@ function Doc({ label, name, file, onView, onDownload, children }) {
           <p className="doc-name">{name}</p>
           <div className="doc-actions">
             {file && canPreview(file) && (
-              <Button variant="ghost" size="sm" onClick={onView} aria-label={`View ${name}`}>View</Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onView}
+                aria-label={`View ${name}`}
+              >
+                View
+              </Button>
             )}
             {file && (
-              <Button variant="ghost" size="sm" onClick={onDownload} aria-label={`Download ${name}`}>Download</Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onDownload}
+                aria-label={`Download ${name}`}
+              >
+                Download
+              </Button>
             )}
           </div>
         </>
@@ -34,7 +54,16 @@ function Doc({ label, name, file, onView, onDownload, children }) {
   );
 }
 
-function ApplicationRow({ card, resumes, letters, open, onToggle, onAttach, onEditLetter, onError }) {
+function ApplicationRow({
+  card,
+  resumes,
+  letters,
+  open,
+  onToggle,
+  onAttach,
+  onEditLetter,
+  onError,
+}) {
   const stage = card.status.toLowerCase();
   const resume = resumes.find((r) => r.id === card.resumeId);
   const letterFile = letters.find((l) => l.id === card.coverLetterId);
@@ -66,7 +95,16 @@ function ApplicationRow({ card, resumes, letters, open, onToggle, onAttach, onEd
             {letterCount ? "Cover letter attached" : "No cover letter"}
           </span>
         </span>
-        <svg className="app-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+        <svg
+          className="app-chevron"
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          aria-hidden="true"
+        >
           <path d="m6 9 6 6 6-6" />
         </svg>
       </button>
@@ -85,11 +123,19 @@ function ApplicationRow({ card, resumes, letters, open, onToggle, onAttach, onEd
               <select
                 className="dd-move"
                 value={card.resumeId ?? ""}
-                onChange={(e) => onAttach(card, { resumeId: e.target.value === "" ? null : Number(e.target.value) })}
+                onChange={(e) =>
+                  onAttach(card, {
+                    resumeId:
+                      e.target.value === "" ? null : Number(e.target.value),
+                  })
+                }
               >
                 <option value="">None</option>
                 {resumes.map((r) => (
-                  <option key={r.id} value={r.id}>{r.fileName}{r.current ? " (current)" : ""}</option>
+                  <option key={r.id} value={r.id}>
+                    {r.fileName}
+                    {r.current ? " (current)" : ""}
+                  </option>
                 ))}
               </select>
             </label>
@@ -107,11 +153,18 @@ function ApplicationRow({ card, resumes, letters, open, onToggle, onAttach, onEd
               <select
                 className="dd-move"
                 value={card.coverLetterId ?? ""}
-                onChange={(e) => onAttach(card, { coverLetterId: e.target.value === "" ? null : Number(e.target.value) })}
+                onChange={(e) =>
+                  onAttach(card, {
+                    coverLetterId:
+                      e.target.value === "" ? null : Number(e.target.value),
+                  })
+                }
               >
                 <option value="">None</option>
                 {letters.map((l) => (
-                  <option key={l.id} value={l.id}>{l.fileName}</option>
+                  <option key={l.id} value={l.id}>
+                    {l.fileName}
+                  </option>
                 ))}
               </select>
             </label>
@@ -119,9 +172,19 @@ function ApplicationRow({ card, resumes, letters, open, onToggle, onAttach, onEd
 
           <div className="doc doc-wide">
             <h4 className="doc-label">Written cover letter</h4>
-            {written ? <p className="doc-text">{card.coverLetter}</p> : <p className="doc-none">No written letter for this application.</p>}
+            {written ? (
+              <p className="doc-text">{card.coverLetter}</p>
+            ) : (
+              <p className="doc-none">
+                No written letter for this application.
+              </p>
+            )}
             <div className="doc-actions">
-              <Button variant="ghost" size="sm" onClick={() => onEditLetter(card)}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onEditLetter(card)}
+              >
                 {written ? "Edit written letter" : "Write a cover letter"}
               </Button>
             </div>
@@ -160,7 +223,9 @@ function ResumeHistory({ resumes, cards, onError }) {
               <div>
                 <p className="rh-name">
                   {r.fileName}
-                  {r.current && <span className="resume-badge rh-badge">Current</span>}
+                  {r.current && (
+                    <span className="resume-badge rh-badge">Current</span>
+                  )}
                 </p>
                 <p className="rh-meta">
                   Uploaded {formatUploadDate(r.uploadedAt)} &middot;{" "}
@@ -171,9 +236,23 @@ function ResumeHistory({ resumes, cards, onError }) {
               </div>
               <div className="doc-actions">
                 {canPreview(r) && (
-                  <Button variant="ghost" size="sm" onClick={guard(() => resumeApi.view(r))} aria-label={`View ${r.fileName}`}>View</Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={guard(() => resumeApi.view(r))}
+                    aria-label={`View ${r.fileName}`}
+                  >
+                    View
+                  </Button>
                 )}
-                <Button variant="ghost" size="sm" onClick={guard(() => resumeApi.download(r))} aria-label={`Download ${r.fileName}`}>Download</Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={guard(() => resumeApi.download(r))}
+                  aria-label={`Download ${r.fileName}`}
+                >
+                  Download
+                </Button>
               </div>
             </div>
             {sent.length > 0 && companies(sent)}
@@ -184,7 +263,8 @@ function ResumeHistory({ resumes, cards, onError }) {
         <li key={name} className="rh-item rh-item--none">
           <p className="rh-name">{name}</p>
           <p className="rh-meta">
-            No longer saved &middot; was sent to {sent.length} {sent.length === 1 ? "company" : "companies"}
+            No longer saved &middot; was sent to {sent.length}{" "}
+            {sent.length === 1 ? "company" : "companies"}
           </p>
           {companies(sent)}
         </li>
@@ -193,8 +273,9 @@ function ResumeHistory({ resumes, cards, onError }) {
         <li className="rh-item rh-item--none">
           <p className="rh-name">No resume recorded</p>
           <p className="rh-meta">
-            {unsent.length} {unsent.length === 1 ? "application has" : "applications have"} no resume
-            attached. Pick one under By application below.
+            {unsent.length}{" "}
+            {unsent.length === 1 ? "application has" : "applications have"} no
+            resume attached. Pick one under By application below.
           </p>
           {companies(unsent)}
         </li>
@@ -225,7 +306,9 @@ export function Documents() {
 
   useEffect(() => {
     loadCards();
-    loadStudent().then(setStudent).catch(() => {});
+    loadStudent()
+      .then(setStudent)
+      .catch(() => {});
   }, [loadCards]);
 
   // Removing or replacing a file can detach it from applications, so refresh the cards.
@@ -238,16 +321,25 @@ export function Documents() {
     const name = (list, id) => list.find((f) => f.id === id)?.fileName ?? null;
     const optimistic = {
       ...patch,
-      ...("resumeId" in patch ? { resumeName: name(resumes, patch.resumeId) } : {}),
-      ...("coverLetterId" in patch ? { coverLetterName: name(letters, patch.coverLetterId) } : {}),
+      ...("resumeId" in patch
+        ? { resumeName: name(resumes, patch.resumeId) }
+        : {}),
+      ...("coverLetterId" in patch
+        ? { coverLetterName: name(letters, patch.coverLetterId) }
+        : {}),
     };
     const before = { ...card };
-    const update = (next) => setCards((prev) => prev.map((c) => (c.id === card.id ? { ...c, ...next } : c)));
+    const update = (next) =>
+      setCards((prev) =>
+        prev.map((c) => (c.id === card.id ? { ...c, ...next } : c)),
+      );
     update(optimistic);
-    api(`/tracker/${card.id}`, { method: "PATCH", body: patch }).catch((err) => {
-      update(before);
-      setError(err.message);
-    });
+    api(`/tracker/${card.id}`, { method: "PATCH", body: patch }).catch(
+      (err) => {
+        update(before);
+        setError(err.message);
+      },
+    );
   };
 
   const withoutResume = cards.filter((c) => !c.resumeId).length;
@@ -257,9 +349,6 @@ export function Documents() {
     <div className="page docs-page">
       <header className="page-head rise">
         <h1 className="page-title">Documents</h1>
-        <p className="page-lede">
-          Every resume version you have, and which company each one was sent to.
-        </p>
       </header>
 
       <Alert onDismiss={() => setError("")}>{error}</Alert>
@@ -271,31 +360,57 @@ export function Documents() {
 
       {!loading && (
         <dl className="docs-summary rise">
-          <div><dt>Resume versions</dt><dd>{resumes.length}</dd></div>
-          <div><dt>Applications</dt><dd>{cards.length}</dd></div>
+          <div>
+            <dt>Resume versions</dt>
+            <dd>{resumes.length}</dd>
+          </div>
+          <div>
+            <dt>Applications</dt>
+            <dd>{cards.length}</dd>
+          </div>
           <div className={withoutResume ? "docs-summary--warn" : undefined}>
-            <dt>Without a resume</dt><dd>{withoutResume}</dd>
+            <dt>Without a resume</dt>
+            <dd>{withoutResume}</dd>
           </div>
         </dl>
       )}
 
-      <section className="docs-section rise" style={{ "--i": 1 }} aria-labelledby="docs-by-resume">
+      <section
+        className="docs-section rise"
+        style={{ "--i": 1 }}
+        aria-labelledby="docs-by-resume"
+      >
         <div className="docs-bar">
-          <h2 id="docs-by-resume" className="docs-h">Resume versions</h2>
+          <h2 id="docs-by-resume" className="docs-h">
+            Resume versions
+          </h2>
         </div>
         {loading ? (
           <Skeleton height="64px" style={{ borderRadius: 10 }} />
         ) : cards.length === 0 && resumes.length === 0 ? (
-          <p className="docs-none">Upload a resume above, then apply to roles to see where each version goes.</p>
+          <p className="docs-none">
+            Upload a resume above, then apply to roles to see where each version
+            goes.
+          </p>
         ) : (
           <ResumeHistory resumes={resumes} cards={cards} onError={setError} />
         )}
       </section>
 
-      <section className="docs-section rise" style={{ "--i": 2 }} aria-labelledby="docs-by-app">
+      <section
+        className="docs-section rise"
+        style={{ "--i": 2 }}
+        aria-labelledby="docs-by-app"
+      >
         <div className="docs-bar">
-          <h2 id="docs-by-app" className="docs-h">By application</h2>
-          <div className="docs-filter" role="group" aria-label="Filter by stage">
+          <h2 id="docs-by-app" className="docs-h">
+            By application
+          </h2>
+          <div
+            className="docs-filter"
+            role="group"
+            aria-label="Filter by stage"
+          >
             {["All", ...STAGES].map((s) => (
               <button
                 key={s}
@@ -318,9 +433,14 @@ export function Documents() {
         ) : cards.length === 0 ? (
           <EmptyState
             title="No applications yet"
-            action={<Button as={Link} to="/internships">Browse internships</Button>}
+            action={
+              <Button as={Link} to="/internships">
+                Browse internships
+              </Button>
+            }
           >
-            Apply to a role or add an application on the Tracker, and its documents will show up here.
+            Apply to a role or add an application on the Tracker, and its
+            documents will show up here.
           </EmptyState>
         ) : shown.length === 0 ? (
           <p className="docs-none">No {stage.toLowerCase()} applications.</p>
@@ -347,7 +467,9 @@ export function Documents() {
         card={cards.find((c) => c.id === letterCardId) ?? null}
         student={student}
         onSaved={(id, coverLetter) =>
-          setCards((prev) => prev.map((c) => (c.id === id ? { ...c, coverLetter } : c)))
+          setCards((prev) =>
+            prev.map((c) => (c.id === id ? { ...c, coverLetter } : c)),
+          )
         }
         onClose={() => setLetterCardId(null)}
       />
