@@ -1,250 +1,348 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { Hero } from "../components/Hero.jsx";
 import { api } from "../utils/api.js";
 import { isAuthenticated } from "../utils/auth.js";
-import { formatUploadDate, resumeApi, resumeUsage } from "../utils/resume.js";
-import { Hero } from "../components/Hero.jsx";
+import { resumeApi } from "../utils/resume.js";
 import "./Home.css";
 
-const PATHS = [
-  {
-    to: "/internships",
-    title: "Opportunities",
-    body: "Roles sorted by how close they are to you. Apply in one click and it lands on your board.",
-    go: "Browse roles",
-  },
-  {
-    to: "/tracker",
-    title: "Tracker",
-    body: "Drag each application from Applied to Interview to Offer, so nothing slips.",
-    go: "Open tracker",
-  },
-  {
-    to: "/profile",
-    title: "Profile",
-    body: "Keep your skills and details up to date so roles match you better.",
-    go: "Edit profile",
-  },
-];
+const STAGES = ["Applied", "OA", "Interview", "Offer"];
 
-const SAMPLE = [
-  {
-    id: "v1",
-    name: "Resume v1",
-    detail: "General",
-    sent: [{ to: "Lumen Health", stage: "Offer" }],
-  },
-  {
-    id: "v2",
-    name: "Resume v2",
-    detail: "Backend",
-    sent: [
-      { to: "Acme Robotics", stage: "Applied" },
-      { to: "Northwind Cloud", stage: "Interview" },
-    ],
-  },
-  {
-    id: "v3",
-    name: "Resume v3",
-    detail: "Data",
-    sent: [
-      { to: "Brightpath Analytics", stage: "Interview" },
-      { to: "Tidewater Labs", stage: "Applied" },
-      { to: "Orbit Pay", stage: "OA" },
-    ],
-  },
-];
+const Icon = ({ name }) => {
+  const paths = {
+    profile: (
+      <>
+        <circle cx="12" cy="8" r="3" />
+        <path d="M5.5 20c.7-4 2.8-6 6.5-6s5.8 2 6.5 6" />
+      </>
+    ),
+    search: (
+      <>
+        <circle cx="10.5" cy="10.5" r="6.5" />
+        <path d="m16 16 4 4" />
+      </>
+    ),
+    board: (
+      <>
+        <rect x="3" y="4" width="18" height="16" rx="2" />
+        <path d="M9 4v16M15 4v16" />
+      </>
+    ),
+    file: (
+      <>
+        <path d="M6 3h8l4 4v14H6z" />
+        <path d="M14 3v5h5M9 13h6M9 17h4" />
+      </>
+    ),
+    chart: (
+      <>
+        <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
+      </>
+    ),
+    prep: (
+      <>
+        <path d="m4 5 8-3 8 3-8 3zM7 7v6c2.7 2 7.3 2 10 0V7" />
+        <path d="M20 5v7" />
+      </>
+    ),
+    check: <path d="m5 12 4 4L19 6" />,
+  };
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {paths[name]}
+    </svg>
+  );
+};
 
-// Newest resumes first from the API; show the latest three, oldest of those at the back.
-function realVersions({ cards, resumes }) {
-  const total = resumes.length;
-  return resumeUsage(resumes, cards)
-    .versions.slice(0, 3)
-    .map(({ resume, sent }, i) => ({
-      id: `v${total - i}`,
-      name: resume.fileName,
-      detail: `Uploaded ${formatUploadDate(resume.uploadedAt)}`,
-      sent: sent.map((c) => ({ to: c.company ?? c.title, stage: c.status })),
-    }))
-    .reverse();
+function PersonalBrief({ data }) {
+  if (!data) return null;
+  const cards = data.cards || [];
+  const open = cards.filter(
+    (card) => !["Offer", "Rejected"].includes(card.status),
+  ).length;
+  const interviews = cards.filter((card) => card.status === "Interview").length;
+  const withoutResume = cards.filter((card) => !card.resume_id).length;
+  return (
+    <section className="home-brief" aria-labelledby="brief-title">
+      <div className="brief-copy">
+        <p className="brief-kicker">Your desk today</p>
+        <h2 id="brief-title">
+          You have {open} active {open === 1 ? "application" : "applications"}.
+        </h2>
+        <p>
+          {interviews ? `${interviews} reached interview. ` : ""}
+          {withoutResume
+            ? `${withoutResume} still need a resume recorded.`
+            : "Every application has a resume recorded."}
+        </p>
+      </div>
+      <dl className="brief-numbers">
+        {STAGES.map((stage) => (
+          <div key={stage}>
+            <dt>{stage}</dt>
+            <dd>{cards.filter((card) => card.status === stage).length}</dd>
+          </div>
+        ))}
+      </dl>
+      <Link to="/tracker" className="brief-action">
+        View application status
+      </Link>
+    </section>
+  );
 }
 
-function ResumeStack({ versions, live }) {
-  const [picked, setPicked] = useState(null);
-  const active = Math.min(picked ?? versions.length - 1, versions.length - 1);
-  const tabRefs = useRef([]);
-
-  const onKeyDown = (e) => {
-    const step = { ArrowRight: 1, ArrowLeft: -1 }[e.key];
-    if (!step) return;
-    e.preventDefault();
-    const next = (active + step + versions.length) % versions.length;
-    setPicked(next);
-    tabRefs.current[next]?.focus();
-  };
-
+function ProfilePreview() {
   return (
-    <div className="stack">
-      <div
-        className="stack-tabs"
-        role="tablist"
-        aria-label="Resume versions"
-        onKeyDown={onKeyDown}
-      >
-        {versions.map((v, i) => (
-          <button
-            key={v.id}
-            ref={(el) => (tabRefs.current[i] = el)}
-            type="button"
-            role="tab"
-            id={`stack-tab-${v.id}`}
-            aria-selected={active === i}
-            aria-controls="stack-panel"
-            tabIndex={active === i ? 0 : -1}
-            className="stack-tab"
-            onClick={() => setPicked(i)}
-          >
-            {v.id}
-          </button>
-        ))}
+    <div className="home-preview profile-preview" aria-hidden="true">
+      <div className="preview-person">
+        <span>KA</span>
+        <div>
+          <b>Your career profile</b>
+          <small>Skills, education and links</small>
+        </div>
       </div>
-      <div
-        className="stack-sheets"
-        id="stack-panel"
-        role="tabpanel"
-        aria-labelledby={`stack-tab-${versions[active].id}`}
-      >
-        {versions.map((v, i) => {
-          const depth = (i - active + versions.length) % versions.length;
-          return (
-            <article
-              key={v.id}
-              className="sheet"
-              data-depth={depth}
-              aria-hidden={depth !== 0}
-            >
-              <header className="sheet-head">
-                <span className="sheet-name">{v.name}</span>
-                <span className="sheet-focus">{v.detail}</span>
-              </header>
-              <div className="sheet-lines" aria-hidden="true">
-                <i />
-                <i />
-                <i />
-              </div>
-              <p className="sheet-label">
-                {v.sent.length
-                  ? `Sent to ${v.sent.length} ${v.sent.length === 1 ? "company" : "companies"}`
-                  : "Not sent anywhere yet"}
-              </p>
-              <ul className="sheet-sent">
-                {v.sent.map((c, k) => (
-                  <li key={`${c.to}-${k}`}>
-                    <span>{c.to}</span>
-                    <mark
-                      className={`sheet-stage sheet-${c.stage.toLowerCase()}`}
-                    >
-                      {c.stage}
-                    </mark>
-                  </li>
-                ))}
-              </ul>
-            </article>
-          );
-        })}
+      <div className="preview-completion">
+        <span>
+          <i />
+        </span>
+        <b>82%</b>
+      </div>
+      <div className="preview-connectors">
+        <span>
+          <i>GH</i> GitHub <b>Connected</b>
+        </span>
+        <span>
+          <i>LC</i> LeetCode <b>Connected</b>
+        </span>
+        <span>
+          <i>OR</i> ORCID <em>Add</em>
+        </span>
       </div>
     </div>
   );
 }
 
-const STEPS = [
-  {
-    title: "Upload each version",
-    body: "Save a resume for every role type. The latest becomes your current one.",
-  },
-  {
-    title: "Apply as usual",
-    body: "Every application records the resume you sent, so there is nothing to note down.",
-  },
-  {
-    title: "See what works",
-    body: "Check which version got interviews and offers, and which company received it.",
-  },
-];
-
-function Feature({ data }) {
-  const live = !!data?.resumes.length;
-  const versions = live ? realVersions(data) : SAMPLE;
+function OpportunityPreview() {
   return (
-    <section className="feature-wrap" aria-labelledby="feature-h">
-      <div className="feature">
-        <div className="feature-copy">
-          <h2 id="feature-h">
-            Know exactly which resume went to which company.
-          </h2>
-          <p>
-            Every version you upload is saved, and every application remembers
-            the one you sent. When an interview comes in, you can see which
-            resume earned it.
-          </p>
-          <Link to="/documents" className="feature-go">
-            Open resume tracking
-          </Link>
-        </div>
-        <ResumeStack versions={versions} live={live} />
+    <div className="home-preview opportunity-preview" aria-hidden="true">
+      <div className="preview-filter">
+        <span>Recommended for you</span>
+        <i>24 roles</i>
       </div>
-      <ol className="steps">
-        {STEPS.map((st, i) => (
-          <li key={st.title}>
-            <span className="step-n" aria-hidden="true">
-              {i + 1}
-            </span>
-            <h3>{st.title}</h3>
-            <p>{st.body}</p>
-          </li>
-        ))}
-      </ol>
-    </section>
+      <article>
+        <div className="company-mark">N</div>
+        <div>
+          <b>Software engineering intern</b>
+          <span>Northstar Labs · Bengaluru</span>
+          <p>
+            <mark>92% match</mark>
+            <mark>React</mark>
+            <mark>Node.js</mark>
+          </p>
+        </div>
+      </article>
+      <article>
+        <div className="company-mark">O</div>
+        <div>
+          <b>Data science intern</b>
+          <span>Orbit Analytics · Remote</span>
+          <p>
+            <mark>84% match</mark>
+            <mark>Python</mark>
+          </p>
+        </div>
+      </article>
+    </div>
   );
 }
 
-const STAGES = ["Applied", "Interview", "Offer"];
-
-function CountUp({ to }) {
-  const [n, setN] = useState(0);
-  const instant =
-    !to || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-  useEffect(() => {
-    if (instant) return;
-    const start = performance.now();
-    let raf;
-    const tick = (now) => {
-      const t = Math.min((now - start) / 700, 1);
-      setN(Math.round(to * (1 - (1 - t) ** 3)));
-      if (t < 1) raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [to, instant]);
-  return instant ? to : n;
+function BoardPreview() {
+  return (
+    <div className="home-preview board-preview" aria-hidden="true">
+      {[
+        { stage: "Applied", items: ["Northstar", "Orbit"] },
+        { stage: "Interview", items: ["Lumen"] },
+        { stage: "Offer", items: ["Acme"] },
+      ].map((lane) => (
+        <div className="mini-lane" key={lane.stage}>
+          <b>
+            {lane.stage}
+            <i>{lane.items.length}</i>
+          </b>
+          {lane.items.map((item) => (
+            <span key={item}>
+              {item}
+              <small>
+                {lane.stage === "Interview"
+                  ? "Tomorrow, 2 PM"
+                  : "Software intern"}
+              </small>
+            </span>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
 }
 
-function Dashboard({ data }) {
-  if (!data?.cards.length) return null;
-  const { cards } = data;
+function DocumentsPreview() {
   return (
-    <>
-      <section className="stats" aria-label="Your pipeline">
-        {STAGES.map((s) => (
-          <div key={s} className="stat">
-            <span className="stat-n">
-              <CountUp to={cards.filter((c) => c.status === s).length} />
-            </span>
-            <span className="stat-l">{s}</span>
-          </div>
-        ))}
-      </section>
-    </>
+    <div className="home-preview documents-preview" aria-hidden="true">
+      <div className="paper-sheet">
+        <span className="paper-name">Kiah A.</span>
+        <i />
+        <i />
+        <i />
+        <b>Experience</b>
+        <i />
+        <i />
+      </div>
+      <div className="document-notes">
+        <span>
+          <Icon name="check" />
+          <b>Resume v3</b>
+          <small>Used for 6 applications</small>
+        </span>
+        <span>
+          <Icon name="check" />
+          <b>Built for backend roles</b>
+          <small>Open directly in Overleaf</small>
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function InsightPreview() {
+  return (
+    <div className="home-preview insight-preview" aria-hidden="true">
+      <div className="mini-funnel">
+        <span style={{ "--w": "100%" }}>
+          Applied <b>28</b>
+        </span>
+        <span style={{ "--w": "68%" }}>
+          OA <b>19</b>
+        </span>
+        <span style={{ "--w": "39%" }}>
+          Interview <b>11</b>
+        </span>
+        <span style={{ "--w": "14%" }}>
+          Offer <b>4</b>
+        </span>
+      </div>
+      <p>
+        <b>Backend resume performs best</b>
+        <span>2.4× more interviews than your general resume</span>
+      </p>
+    </div>
+  );
+}
+
+const FLOW = [
+  {
+    id: "track",
+    icon: "board",
+    title: "Track every application",
+    body: "Move roles from Applied to Offer and keep deadlines, links and documents attached.",
+    visual: <BoardPreview />,
+    outcome: "Deadlines stay visible.",
+    to: "/tracker",
+    action: "Open the tracker",
+  },
+  {
+    id: "prepare",
+    icon: "profile",
+    title: "Build one useful profile",
+    body: "Add your skills, education and public coding profiles once. Profile completion shows exactly what is missing.",
+    visual: <ProfilePreview />,
+    outcome: "A complete profile improves role matching.",
+    to: "/profile",
+    action: "Complete your profile",
+  },
+  {
+    id: "discover",
+    icon: "search",
+    title: "Find roles that fit",
+    body: "Browse internships with skill-match context, locations and direct application links—without maintaining another spreadsheet.",
+    visual: <OpportunityPreview />,
+    outcome: "Applying adds the role to your tracker.",
+    to: "/internships",
+    action: "Browse opportunities",
+  },
+  {
+    id: "documents",
+    icon: "file",
+    title: "Know which resume you sent",
+    body: "Keep resume versions, attach the right one to each application, or create a clean resume and continue editing it in Overleaf.",
+    visual: <DocumentsPreview />,
+    outcome: "No more guessing before an interview.",
+    to: "/documents",
+    action: "Manage resumes",
+  },
+  {
+    id: "improve",
+    icon: "chart",
+    title: "Learn from the outcomes",
+    body: "Analytics turns your pipeline into useful signals: conversion by stage, application pace and which resume earns more interviews.",
+    visual: <InsightPreview />,
+    outcome: "Use evidence to improve the next application.",
+    to: "/analytics",
+    action: "See your analytics",
+  },
+];
+
+function WorkflowItem({ item, index, signedIn }) {
+  return (
+    <article
+      className={`workflow-item workflow-item--${index % 2 ? "reverse" : "forward"}`}
+      id={item.id}
+    >
+      <div className="workflow-copy">
+        <span className="workflow-icon">
+          <Icon name={item.icon} />
+        </span>
+        <h3>{item.title}</h3>
+        <p>{item.body}</p>
+        <div className="workflow-actions">
+          <p className="workflow-outcome">
+            <Icon name="check" />
+            {item.outcome}
+          </p>
+          {signedIn && (
+            <Link to={item.to} className="workflow-link">
+              {item.action}
+            </Link>
+          )}
+        </div>
+      </div>
+      {item.visual}
+    </article>
+  );
+}
+
+function PrepBand({ signedIn }) {
+  return (
+    <section className="prep-band" aria-labelledby="prep-title">
+      <div className="prep-symbol">
+        <Icon name="prep" />
+      </div>
+      <div>
+        <h2 id="prep-title">Prepare before the interview arrives.</h2>
+        <p>
+          Use focused notes and quizzes to revise common technical and interview
+          topics. Your preparation lives beside the applications it supports.
+        </p>
+      </div>
+      {signedIn && <Link to="/prep">Start preparing</Link>}
+    </section>
   );
 }
 
@@ -258,24 +356,38 @@ export function Home() {
       .catch(() => {});
   }, [signedIn]);
   return (
-    <div className="home-page">
+    <main className="home-page">
       <Hero />
-      <Feature data={data} />
-      {signedIn && <Dashboard data={data} />}
-      <section className="paths" aria-label="Where to go next">
-        <ul className="paths-list">
-          {PATHS.map((p) => (
-            <li key={p.to}>
-              <Link to={p.to} className="path-row">
-                <h2>{p.title}</h2>
-                <p>{p.body}</p>
-                <span className="path-go">{p.go}</span>
-              </Link>
-            </li>
+      {signedIn && <PersonalBrief data={data} />}
+      <section className="workflow" aria-labelledby="workflow-title">
+        <header className="workflow-head">
+          <h2 id="workflow-title">Everything you need, working together.</h2>
+        </header>
+        <div className="workflow-grid">
+          {FLOW.map((item, index) => (
+            <WorkflowItem
+              key={item.id}
+              item={item}
+              index={index}
+              signedIn={signedIn}
+            />
           ))}
-        </ul>
+        </div>
       </section>
-    </div>
+      <PrepBand signedIn={signedIn} />
+      {!signedIn && (
+        <section className="home-final">
+          <h2>Start with one application.</h2>
+          <p>
+            Your tracker, resumes, preparation and progress will stay connected
+            from there.
+          </p>
+          <Link to="/signup">Create your free account</Link>
+          <span>
+            Already have one? <Link to="/login">Sign in</Link>
+          </span>
+        </section>
+      )}
+    </main>
   );
 }
-export default Home;

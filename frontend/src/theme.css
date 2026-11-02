@@ -1,55 +1,40 @@
-/*
- * Site-wide polish, loaded after every page stylesheet so it wins at equal specificity.
- * Rules of use: surfaces are flat paper with a lit top edge and layered shadow. Gradients mark
- * the main action and the selected state. Gold is reserved for the home page highlight and the
- * current nav link.
- */
+/* Final shared visual layer. Keep functional surfaces flat and predictable. */
 :root {
   --gold: #f2c94c;
-  --gold-deep: #c9962f;
-  --brand-gradient: linear-gradient(135deg, #17803a 0%, #0e6818 55%, #0a4f12 100%);
-  --brand-gradient-dark: linear-gradient(135deg, #093f10 0%, #0e6818 60%, #15803a 100%);
-  --surface-gradient: linear-gradient(180deg, #ffffff 0%, #fffdf9 38%, #fbf6ec 100%);
-  --edge-light: inset 0 1px 0 rgba(255, 255, 255, 0.9);
-  --shadow-card: var(--edge-light), 0 1px 2px rgba(42, 28, 15, 0.06), 0 8px 24px rgba(42, 28, 15, 0.07);
-  --shadow-lift: var(--edge-light), 0 2px 4px rgba(42, 28, 15, 0.06), 0 20px 40px rgba(42, 28, 15, 0.13);
+  --gold-deep: #b98216;
+  --shadow-card:
+    0 1px 2px rgba(42, 28, 15, 0.06), 0 8px 24px rgba(42, 28, 15, 0.07);
+  --shadow-lift:
+    0 2px 4px rgba(42, 28, 15, 0.06), 0 16px 32px rgba(42, 28, 15, 0.11);
 }
 
-/* ---------- Page chrome ---------- */
 .page,
 .auth-page {
-  background:
-    radial-gradient(900px 420px at 92% 0%, rgba(14, 104, 24, 0.06), transparent 60%),
-    var(--c2c-cream);
+  background: var(--c2c-cream);
 }
 
-/* ---------- Navbar ---------- */
 .custom-navbar {
-  background: rgba(255, 253, 249, 0.85);
-  box-shadow: 0 6px 24px rgba(42, 28, 15, 0.05);
+  background: rgba(255, 253, 249, 0.94);
+  border-bottom: 1px solid var(--c2c-line);
+  box-shadow: 0 4px 18px rgba(42, 28, 15, 0.05);
 }
+
 .nav-links a:not(.nav-auth-btn):not(.nav-avatar)::after {
-  background: var(--gold-deep);
   height: 3px;
   border-radius: 2px;
-}
-.nav-auth-btn {
-  background: var(--c2c-green);
-  box-shadow: none;
-}
-.nav-auth-btn:hover {
-  background: var(--c2c-green-deep);
+  background: var(--gold-deep);
 }
 
-/* ---------- Primary action ---------- */
+.nav-auth-btn,
 .btn-ui--primary {
   background: var(--c2c-green);
 }
+
+.nav-auth-btn:hover,
 .btn-ui--primary:hover:not(:disabled) {
   background: var(--c2c-green-deep);
 }
 
-/* ---------- Surfaces ---------- */
 .internship-card,
 .post-form,
 .dd-card,
@@ -62,167 +47,135 @@
 .p-details,
 .auth-form-panel,
 .dialog-ui {
+  background: var(--c2c-surface);
   box-shadow: var(--shadow-card);
 }
+
 .dd-card,
 .internship-card,
-.app,
 .rh-item {
-  transition: transform 0.25s var(--ease), box-shadow 0.25s var(--ease), border-color 0.2s;
+  transition:
+    border-color 0.2s var(--ease),
+    box-shadow 0.2s var(--ease);
 }
+
 @media (hover: hover) and (pointer: fine) {
   .dd-card:not(.dd-dragging):hover,
   .internship-card:hover,
   .rh-item:hover {
     box-shadow: var(--shadow-lift);
   }
-  .rh-item:hover {
-    transform: translateY(-2px);
-  }
 }
 
-/* Tracker: the strip carries the stage colour, so the gradient means something. */
 .dd-column {
-  border-top-width: 0;
-  box-shadow: var(--edge-light), 0 10px 28px rgba(42, 28, 15, 0.06);
   position: relative;
+  border-top-width: 0;
+  background: color-mix(in srgb, var(--tint) 42%, var(--c2c-surface));
+  box-shadow: 0 8px 22px rgba(42, 28, 15, 0.06);
 }
+
 .dd-column::before {
   content: "";
   position: absolute;
-  inset: 0 0 auto 0;
+  inset: 0 0 auto;
   height: 4px;
   border-radius: var(--radius-md) var(--radius-md) 0 0;
-  background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 55%, white));
+  background: var(--accent);
 }
 
-/* ---------- Selected states ---------- */
 .seg-btn--on,
 .docs-chip--on {
-  background: var(--c2c-green);
   border-color: transparent;
+  background: var(--c2c-green);
   color: #fff;
 }
+
 .pr-co--on {
   border-left-color: var(--c2c-green);
 }
 
-/* ---------- Analytics ---------- */
 .kpis {
   border: 1px solid var(--c2c-line);
   border-radius: var(--radius-md);
-  padding: 1.5rem 0;
   background: var(--c2c-surface);
   box-shadow: var(--shadow-card);
 }
+
 .kpi:first-child {
   padding-left: 1.5rem;
 }
+
 .kpi-value {
   color: var(--c2c-green-deep);
 }
 
-/* ---------- Profile and resume files ---------- */
-.p-avatar {
-  background: var(--brand-gradient);
-  color: #fff;
-}
-.resume-file-icon {
-  background: var(--brand-gradient);
+.p-avatar,
+.resume-file-icon,
+.empty-ui-icon,
+.nav-avatar-mark {
+  background: var(--c2c-green);
   color: #fff;
 }
 
-/* ---------- Sign in / sign up ---------- */
 .auth-shell {
   box-shadow: var(--shadow-lift);
 }
-.auth-visual-overlay {
-  background: linear-gradient(180deg, rgba(9, 63, 16, 0) 0%, rgba(9, 63, 16, 0.9) 100%);
+
+.empty-ui {
+  background: var(--c2c-surface);
 }
 
-/* ---------- Depth: soft paper gradients (neutral, no colour) ---------- */
-.internship-card,
-.post-form,
-.dd-card,
-.app,
-.rh-item,
-.resume-current,
-.pr-card,
-.pr-round,
-.pr-newround,
-.p-details,
-.auth-form-panel,
-.dialog-ui,
-.kpis,
-.field-input,
-.btn-ui--ghost {
-  background: var(--surface-gradient);
-}
-.dd-column {
-  background:
-    linear-gradient(180deg, var(--tint) 0%, rgba(255, 253, 249, 0.75) 90px),
-    rgba(255, 253, 249, 0.7);
-}
-.empty-ui {
-  background: linear-gradient(180deg, rgba(255, 253, 249, 0.9), rgba(247, 240, 230, 0.6));
-}
-.empty-ui-icon {
-  background: var(--brand-gradient);
-  color: #fff;
-}
 .btn-ui--soft {
   background: var(--c2c-green-tint);
 }
+
 .p-chips li {
-  background: linear-gradient(180deg, #fff, var(--c2c-green-tint));
-}
-.funnel-bar,
-.col-bar {
-  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0) 60%);
+  background: var(--c2c-green-tint);
 }
 
-/* ---------- Page identity: green glow, short title rule, gold only at the nav ---------- */
-.page,
-.auth-page {
-  background:
-    radial-gradient(900px 420px at 92% 0%, rgba(14, 104, 24, 0.09), transparent 60%),
-    radial-gradient(700px 400px at 0% 8%, rgba(14, 104, 24, 0.05), transparent 60%),
-    var(--c2c-cream);
-}
 .page-title {
   position: relative;
   padding-bottom: 0.85rem;
 }
+
 .page-title::after {
   content: "";
   position: absolute;
-  left: 0;
   bottom: 0;
+  left: 0;
   width: 3rem;
   height: 4px;
   border-radius: 2px;
-  background: var(--brand-gradient);
+  background: var(--c2c-green);
 }
-.custom-navbar {
-  background: linear-gradient(180deg, rgba(255, 253, 249, 0.92), rgba(247, 240, 230, 0.86));
-  border-bottom: 1px solid transparent;
-  border-image: linear-gradient(90deg, transparent, var(--c2c-line-strong) 25%, var(--gold) 50%, var(--c2c-line-strong) 75%, transparent) 1;
-}
+
 .nav-avatar-mark {
-  background: var(--brand-gradient);
-  box-shadow: 0 0 0 2px var(--c2c-surface), 0 0 0 3px var(--c2c-green);
+  box-shadow:
+    0 0 0 2px var(--c2c-surface),
+    0 0 0 3px var(--c2c-green);
 }
+
 .p-avatar {
-  box-shadow: 0 0 0 3px var(--c2c-surface), 0 8px 20px rgba(14, 104, 24, 0.25);
+  box-shadow:
+    0 0 0 3px var(--c2c-surface),
+    0 8px 20px rgba(14, 104, 24, 0.2);
 }
+
 .resume-badge {
   background: var(--gold);
   color: #3a2706;
 }
+
 .pr-tab--on {
   border-bottom-color: var(--c2c-green);
 }
+
 .dialog-ui::backdrop {
-  background: radial-gradient(circle at 50% 40%, rgba(9, 63, 16, 0.4), rgba(42, 28, 15, 0.6));
-  backdrop-filter: blur(3px);
+  background: rgba(42, 28, 15, 0.58);
+}
+
+@media (max-width: 760px) {
+  .kpi:first-child {
+    padding-left: 0;
+  }
 }

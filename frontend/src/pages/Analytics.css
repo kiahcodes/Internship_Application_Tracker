@@ -110,7 +110,9 @@
   font-size: 0.88rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.16s var(--ease), color 0.16s var(--ease);
+  transition:
+    background 0.16s var(--ease),
+    color 0.16s var(--ease);
 }
 .seg-btn:hover {
   color: var(--c2c-ink);
@@ -151,13 +153,25 @@
   transform-origin: left;
   animation: grow 0.5s var(--ease) both;
 }
-.funnel-bar--0 { background: var(--ramp-0); }
-.funnel-bar--1 { background: var(--ramp-1); }
-.funnel-bar--2 { background: var(--ramp-2); }
-.funnel-bar--3 { background: var(--ramp-3); }
+.funnel-bar--0 {
+  background: var(--ramp-0);
+}
+.funnel-bar--1 {
+  background: var(--ramp-1);
+}
+.funnel-bar--2 {
+  background: var(--ramp-2);
+}
+.funnel-bar--3 {
+  background: var(--ramp-3);
+}
 @keyframes grow {
-  from { transform: scaleX(0); }
-  to { transform: scaleX(1); }
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
 }
 .funnel-value {
   display: flex;
@@ -248,8 +262,12 @@
   transform-origin: bottom;
 }
 @keyframes rise-bar {
-  from { transform: scaleY(0); }
-  to { transform: scaleY(1); }
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
 }
 .col:hover .col-bar,
 .col:focus-visible .col-bar {
@@ -291,7 +309,9 @@
   pointer-events: none;
   opacity: 0;
   transform: translate(-50%, 4px);
-  transition: opacity 0.14s var(--ease), transform 0.14s var(--ease);
+  transition:
+    opacity 0.14s var(--ease),
+    transform 0.14s var(--ease);
 }
 .col-tip strong {
   font-size: 0.9rem;
@@ -302,10 +322,23 @@
   transform: translate(-50%, 0);
 }
 /* Keep the tooltips of the outermost columns on screen. */
-.col:first-child .col-tip { left: 0; transform: translate(0, 4px); }
-.col:first-child:hover .col-tip, .col:first-child:focus-visible .col-tip { transform: none; }
-.col:last-child .col-tip { left: auto; right: 0; transform: translate(0, 4px); }
-.col:last-child:hover .col-tip, .col:last-child:focus-visible .col-tip { transform: none; }
+.col:first-child .col-tip {
+  left: 0;
+  transform: translate(0, 4px);
+}
+.col:first-child:hover .col-tip,
+.col:first-child:focus-visible .col-tip {
+  transform: none;
+}
+.col:last-child .col-tip {
+  left: auto;
+  right: 0;
+  transform: translate(0, 4px);
+}
+.col:last-child:hover .col-tip,
+.col:last-child:focus-visible .col-tip {
+  transform: none;
+}
 
 /* ---------- Tables ---------- */
 .an-scroll {

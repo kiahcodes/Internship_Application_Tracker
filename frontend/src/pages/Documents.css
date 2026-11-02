@@ -51,7 +51,10 @@
   font-size: 0.88rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.16s var(--ease), color 0.16s var(--ease), border-color 0.16s var(--ease);
+  transition:
+    background 0.16s var(--ease),
+    color 0.16s var(--ease),
+    border-color 0.16s var(--ease);
 }
 .docs-chip:hover {
   border-color: var(--c2c-ink-soft);
@@ -227,7 +230,9 @@
   max-width: none;
 }
 @media (max-width: 860px) {
-  .docs-files { grid-template-columns: 1fr; }
+  .docs-files {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 760px) {
@@ -346,7 +351,11 @@
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
 }
-.docs-summary dt { font-size: 0.82rem; font-weight: 600; color: var(--c2c-ink-soft); }
+.docs-summary dt {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--c2c-ink-soft);
+}
 .docs-summary dd {
   margin: 0.2rem 0 0;
   font-size: 2rem;
@@ -355,8 +364,9 @@
   font-variant-numeric: tabular-nums;
   color: var(--c2c-green-deep);
 }
-.docs-summary .docs-summary--warn dd { color: var(--stage-rejected); }
-
+.docs-summary .docs-summary--warn dd {
+  color: var(--stage-rejected);
+}
 
 /* Upload panels sit at the top as two cards, so changing a file never needs a scroll. */
 .docs-files > .resume {
@@ -366,14 +376,18 @@
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
 }
-.docs-files .resume-title { font-size: 1.25rem; }
+.docs-files .resume-title {
+  font-size: 1.25rem;
+}
 .docs-files .resume-history-list {
   max-height: 14rem;
   overflow-y: auto;
 }
 
 /* The builder is a full-width row of its own, styled like the two upload cards above it. */
-.docs-builder { margin: 0 auto 2.5rem; }
+.docs-builder {
+  margin: 0 auto 2.5rem;
+}
 .docs-builder .rb {
   margin-top: 0;
   background: var(--c2c-surface);
@@ -382,5 +396,8 @@
   box-shadow: var(--shadow-sm);
 }
 @media (max-width: 640px) {
-  .docs-summary { grid-template-columns: 1fr; gap: 0.75rem; }
+  .docs-summary {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
 }

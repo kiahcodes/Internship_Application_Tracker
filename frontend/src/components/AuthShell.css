@@ -28,7 +28,11 @@
 .auth-visual-overlay {
   width: 100%;
   padding: 2.5rem;
-  background: linear-gradient(180deg, rgba(28, 42, 18, 0) 0%, rgba(28, 42, 18, 0.85) 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(28, 42, 18, 0) 0%,
+    rgba(28, 42, 18, 0.85) 100%
+  );
 }
 
 .auth-quote {
