@@ -10,35 +10,6 @@ const STAGES = ["Applied", "OA", "Interview", "Offer"];
 
 const Icon = ({ name }) => {
   const paths = {
-    profile: (
-      <>
-        <circle cx="12" cy="8" r="3" />
-        <path d="M5.5 20c.7-4 2.8-6 6.5-6s5.8 2 6.5 6" />
-      </>
-    ),
-    search: (
-      <>
-        <circle cx="10.5" cy="10.5" r="6.5" />
-        <path d="m16 16 4 4" />
-      </>
-    ),
-    board: (
-      <>
-        <rect x="3" y="4" width="18" height="16" rx="2" />
-        <path d="M9 4v16M15 4v16" />
-      </>
-    ),
-    file: (
-      <>
-        <path d="M6 3h8l4 4v14H6z" />
-        <path d="M14 3v5h5M9 13h6M9 17h4" />
-      </>
-    ),
-    chart: (
-      <>
-        <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
-      </>
-    ),
     prep: (
       <>
         <path d="m4 5 8-3 8 3-8 3zM7 7v6c2.7 2 7.3 2 10 0V7" />
@@ -249,7 +220,6 @@ function InsightPreview() {
 const FLOW = [
   {
     id: "track",
-    icon: "board",
     title: "Track every application",
     body: "Move roles from Applied to Offer and keep deadlines, links and documents attached.",
     visual: <BoardPreview />,
@@ -259,7 +229,6 @@ const FLOW = [
   },
   {
     id: "prepare",
-    icon: "profile",
     title: "Build one useful profile",
     body: "Add your skills, education and public coding profiles once. Profile completion shows exactly what is missing.",
     visual: <ProfilePreview />,
@@ -269,7 +238,6 @@ const FLOW = [
   },
   {
     id: "discover",
-    icon: "search",
     title: "Find roles that fit",
     body: "Browse internships with skill-match context, locations and direct application links—without maintaining another spreadsheet.",
     visual: <OpportunityPreview />,
@@ -279,7 +247,6 @@ const FLOW = [
   },
   {
     id: "documents",
-    icon: "file",
     title: "Know which resume you sent",
     body: "Keep resume versions, attach the right one to each application, or create a clean resume and continue editing it in Overleaf.",
     visual: <DocumentsPreview />,
@@ -289,7 +256,6 @@ const FLOW = [
   },
   {
     id: "improve",
-    icon: "chart",
     title: "Learn from the outcomes",
     body: "Analytics turns your pipeline into useful signals: conversion by stage, application pace and which resume earns more interviews.",
     visual: <InsightPreview />,
@@ -306,9 +272,6 @@ function WorkflowItem({ item, index, signedIn }) {
       id={item.id}
     >
       <div className="workflow-copy">
-        <span className="workflow-icon">
-          <Icon name={item.icon} />
-        </span>
         <h3>{item.title}</h3>
         <p>{item.body}</p>
         <div className="workflow-actions">
@@ -331,9 +294,6 @@ function WorkflowItem({ item, index, signedIn }) {
 function PrepBand({ signedIn }) {
   return (
     <section className="prep-band" aria-labelledby="prep-title">
-      <div className="prep-symbol">
-        <Icon name="prep" />
-      </div>
       <div>
         <h2 id="prep-title">Prepare before the interview arrives.</h2>
         <p>

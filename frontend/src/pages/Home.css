@@ -106,20 +106,6 @@
   position: relative;
   max-width: none;
 }
-.workflow-icon {
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  margin-bottom: 1.25rem;
-  border: 1px solid var(--c2c-line-strong);
-  border-radius: 50%;
-  background: var(--c2c-cream);
-  color: var(--c2c-green);
-}
-.workflow-icon svg {
-  width: 21px;
-}
 .workflow-copy h3 {
   margin: 0;
   font-size: 1.65rem;

@@ -77,7 +77,6 @@ function Funnel({ data }) {
   );
 }
 
-/* ---------- Applications over time: one series, one color, no legend ---------- */
 function niceMax(max) {
   if (max <= 2) return 2; // keeps the middle tick a whole number
   if (max <= 10) return Math.ceil(max / 2) * 2;

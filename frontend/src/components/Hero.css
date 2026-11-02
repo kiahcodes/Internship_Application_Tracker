@@ -13,25 +13,13 @@
   z-index: 2;
 }
 .hero-welcome {
-  width: fit-content;
-  margin: 0 0 1.2rem;
-  padding: 0.45rem 0.75rem 0.45rem 0.55rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  border: 1px solid #c9bda8;
-  border-radius: 999px;
-  background: rgba(255, 253, 249, 0.72);
+  margin: 0 0 1.4rem;
   color: var(--c2c-ink);
-  font-size: 0.8rem;
-  font-weight: 800;
-}
-.hero-welcome span {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--c2c-green);
-  box-shadow: 0 0 0 4px rgba(14, 104, 24, 0.12);
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 550;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
 }
 .hero h1 {
   margin: 0;

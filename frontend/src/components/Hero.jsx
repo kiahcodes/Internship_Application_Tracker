@@ -35,7 +35,11 @@ export const Hero = () => {
           <b>{(students + 1000).toLocaleString("en-IN")}+</b>
           <span>students already<br />organizing their search</span>
         </div>
-        {signedIn && <p className="hero-welcome"><span aria-hidden="true" />Welcome back{name ? `, ${name.split(" ")[0]}` : ""}</p>}
+        {signedIn && (
+          <p className="hero-welcome">
+            Welcome back{name ? `, ${name.split(" ")[0]}` : ""}.
+          </p>
+        )}
         <h1>Make every <span key={MOMENTS[moment]} className="hero-moment">{MOMENTS[moment]}</span> count.</h1>
         <p className="hero-lede">Find it. Track it. Be ready for what comes next.</p>
         <div className="hero-actions">
