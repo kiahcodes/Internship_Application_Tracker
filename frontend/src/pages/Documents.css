@@ -1,12 +1,16 @@
 .docs-page .docs-section,
-.docs-page .docs-files {
-  max-width: 960px;
+.docs-page .docs-files,
+.docs-page .docs-builder,
+.docs-page .docs-summary {
+  max-width: 1100px;
   margin-left: auto;
   margin-right: auto;
 }
 .docs-page .page-head,
 .docs-page .alert-ui {
-  max-width: 960px;
+  max-width: 1100px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .docs-bar {
@@ -21,6 +25,16 @@
   margin: 0;
   font-size: 1.6rem;
   font-weight: 500;
+}
+.docs-range {
+  margin: -0.35rem 0 0.8rem;
+  color: var(--c2c-ink-soft);
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+}
+
+#docs-by-app {
+  scroll-margin-top: 7rem;
 }
 .docs-filter {
   display: flex;
@@ -205,7 +219,7 @@
   gap: 1.25rem;
   align-items: start;
   max-width: 1100px;
-  margin: 0 auto 2rem;
+  margin: 0 auto 1.25rem;
 }
 .docs-files > .resume {
   min-width: 0;
@@ -318,15 +332,14 @@
 
 /* ---------- Summary + grid ---------- */
 .docs-summary {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.25rem;
   max-width: 1100px;
-  margin: 0 auto 2rem;
+  margin: 0 auto 1.25rem;
   padding: 0;
 }
 .docs-summary > div {
-  flex: 1 1 10rem;
   padding: 1rem 1.25rem;
   background: var(--c2c-surface);
   border: 1px solid var(--c2c-line);
@@ -357,4 +370,17 @@
 .docs-files .resume-history-list {
   max-height: 14rem;
   overflow-y: auto;
+}
+
+/* The builder is a full-width row of its own, styled like the two upload cards above it. */
+.docs-builder { margin: 0 auto 2.5rem; }
+.docs-builder .rb {
+  margin-top: 0;
+  background: var(--c2c-surface);
+  border: 1px solid var(--c2c-line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+@media (max-width: 640px) {
+  .docs-summary { grid-template-columns: 1fr; gap: 0.75rem; }
 }

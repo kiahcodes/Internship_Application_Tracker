@@ -7,7 +7,7 @@ import "dotenv/config";
 import { pool, isUniqueViolation } from "./db.js";
 import { uploadFile, downloadFile, removeFiles } from "./storage.js";
 import { normalizeUsername, usernameError } from "./username.js";
-import { identityFromToken, suggestUsername } from "./oauth.js";
+import { githubHandleFromToken, identityFromToken, suggestUsername } from "./oauth.js";
 import { computeAnalytics } from "./analytics.js";
 import { mountPrep } from "./prep.js";
 import { mountInternships } from "./internships.js";
@@ -332,6 +332,21 @@ app.put("/api/profile", requireAuth, h(async (req, res) => {
   }
   const [rows] = await pool.query(profileQuery, [req.userId]);
   res.json({ ...shapeProfile(rows[0]), projects: await loadProjects(req.userId) });
+}));
+
+// GitHub is the one profile connector with a real OAuth flow. The Supabase token proves
+// ownership of the GitHub account; our normal JWT still decides which profile is updated.
+const connectorLimit = rateLimit({
+  windowMs: 15 * 60 * 1000, max: 10, key: (req) => `u${req.userId}`,
+  message: "Too many connection attempts. Please wait a few minutes and try again.",
+});
+app.post("/api/connectors/github", requireAuth, connectorLimit, h(async (req, res) => {
+  const handle = await githubHandleFromToken(String(req.body.accessToken || ""));
+  if (!handle)
+    return res.status(401).json({ error: "GitHub couldn't verify that account. Please try again." });
+  const url = `https://github.com/${handle}`;
+  await pool.query("UPDATE profiles SET github = ? WHERE user_id = ?", [url, req.userId]);
+  res.json({ provider: "github", handle, url });
 }));
 
 // ---------- Internships ----------

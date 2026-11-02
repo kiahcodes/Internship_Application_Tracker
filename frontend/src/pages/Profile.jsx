@@ -18,6 +18,7 @@ import {
   withCurrent,
 } from "../utils/options";
 import { completeness, hasValue } from "../utils/profileCompleteness";
+import { ProfileConnectors } from "../components/ProfileConnectors.jsx";
 import "./Profile.css";
 
 const splitSkills = (skills) =>
@@ -636,30 +637,15 @@ export function Profile() {
                 )}
               </Section>
 
-              <Section id="p-links" title="Links">
-                {LINKS.some(([key]) => student[key]) ? (
-                  <ul className="p-linklist">
-                    {LINKS.filter(([key]) => student[key]).map(
-                      ([key, label]) => (
-                        <li key={key}>
-                          <span>{label}</span>
-                          <a
-                            href={student[key]}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            {hostOf(student[key])} ↗
-                          </a>
-                        </li>
-                      ),
-                    )}
-                  </ul>
-                ) : (
-                  <p className="p-missing">
-                    No links yet. {editLink("Add GitHub, LeetCode or LinkedIn")}
-                  </p>
-                )}
-              </Section>
+              <ProfileConnectors
+                profile={student}
+                onChange={(next) => {
+                  setStudent(next);
+                  setDraft(next);
+                  setSaved(true);
+                  setTimeout(() => setSaved(false), 3000);
+                }}
+              />
             </div>
           </div>
         )}

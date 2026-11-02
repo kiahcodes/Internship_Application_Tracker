@@ -22,6 +22,30 @@ export async function identityFromToken(accessToken) {
   };
 }
 
+/**
+ * Returns the GitHub handle proved by a Supabase GitHub OAuth token.
+ * This is deliberately separate from login: the signed-in app user may connect
+ * a GitHub account whose public email differs from their Campus2Career email.
+ */
+export function githubHandleFromUser(user) {
+  if (!user) return null;
+  const identity = user.identities?.find((item) => item.provider === "github");
+  if (!identity) return null;
+  const meta = identity?.identity_data ?? {};
+  const handle = String(
+    meta.user_name || meta.preferred_username || user.user_metadata?.user_name || "",
+  ).trim();
+  return /^[A-Za-z0-9-]{1,39}$/.test(handle) ? handle : null;
+}
+
+export async function githubHandleFromToken(accessToken) {
+  const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { persistSession: false },
+  });
+  const { data, error } = await supabase.auth.getUser(accessToken);
+  return error ? null : githubHandleFromUser(data?.user);
+}
+
 /** A free username close to what the provider gave us, e.g. "kiah" -> "kiah", "kiah2". */
 export async function suggestUsername(handle) {
   let base = String(handle).toLowerCase().replace(/[^a-z0-9_]/g, "_").replace(/_+/g, "_").slice(0, 26);

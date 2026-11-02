@@ -6,10 +6,19 @@ import { CoverLetterDialog } from "../components/CoverLetterDialog.jsx";
 import { ImportDialog } from "../components/ImportDialog.jsx";
 import { ImportGuideDialog } from "../components/ImportGuideDialog.jsx";
 import { Alert, Button, Skeleton } from "../components/ui.jsx";
-import { daysUntil, describeDeadline } from "../utils/internships";
+import { daysUntil, describeDeadline, formatDay } from "../utils/internships";
+import { ApplicationDialog } from "../components/ApplicationDialog.jsx";
 import "./Tracker.css";
 
 const COLUMNS = ["Applied", "OA", "Interview", "Offer", "Rejected"];
+// One line under each column name, so the board explains itself.
+const MEANING = {
+  Applied: "Waiting for a reply",
+  OA: "Tests and assessments",
+  Interview: "Talking to people",
+  Offer: "Time to decide",
+  Rejected: "Closed",
+};
 const HINTS = {
   Applied: "Applications you've sent land here.",
   OA: "Online assessments and coding tests go here.",
@@ -35,6 +44,7 @@ export function Tracker() {
   const [importText, setImportText] = useState("");
   const [importing, setImporting] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
+  const [openId, setOpenId] = useState(null);
   const fileInput = useRef(null);
 
   useEffect(() => {
@@ -71,6 +81,8 @@ export function Tracker() {
     try {
       await api(`/tracker/${id}`, { method: "DELETE" });
       setCards((prev) => prev.filter((c) => c.id !== id));
+      setOpenId(null);
+      setAnnounce("Application removed");
     } catch (err) {
       setError(err.message);
     }
@@ -130,11 +142,12 @@ export function Tracker() {
     })
     .sort((a, b) => a.days - b.days)
     .slice(0, 8);
-  const when = (days) =>
+  const when = (days, iso) =>
     days < 0 ? `${-days} ${days === -1 ? "day" : "days"} overdue`
     : days === 0 ? "today"
     : days === 1 ? "tomorrow"
-    : `in ${days} days`;
+    : days <= 7 ? `in ${days} days`
+    : `on ${formatDay(iso)}`;
 
   async function exportCsv() {
     try {
@@ -238,11 +251,58 @@ export function Tracker() {
   const counts = Object.fromEntries(
     COLUMNS.map((c) => [c, cards.filter((card) => card.status === c).length]),
   );
+  const inPlay = counts.Applied + counts.OA + counts.Interview;
+  const summary =
+    cards.length === 0
+      ? "Nothing here yet. Add your first application below, or import the spreadsheet you already keep."
+      : `${inPlay} still in play, ${counts.Offer} ${counts.Offer === 1 ? "offer" : "offers"}, ${counts.Rejected} closed.`;
+  const openCard = cards.find((c) => c.id === openId) ?? null;
+
+  // The signals worth seeing without opening a card.
+  const chipsFor = (card) => {
+    const chips = [];
+    const open = card.status !== "Offer" && card.status !== "Rejected";
+    if (card.deadline && card.status === "Applied" && daysUntil(card.deadline) >= 0) {
+      const d = describeDeadline(card.deadline);
+      chips.push({ key: "dl", text: d.text, tone: d.tone });
+    }
+    if (card.remindOn && open) {
+      const days = daysUntil(card.remindOn);
+      chips.push({
+        key: "rm",
+        text: `Remind ${when(days, card.remindOn)}`,
+        tone: days < 0 ? "urgent" : days <= 1 ? "soon" : "",
+      });
+    }
+    if (card.resumeId || card.resumeName) chips.push({ key: "rs", text: card.resumeName ?? "Resume attached", tone: "file" });
+    if (card.coverLetter || card.coverLetterId) chips.push({ key: "cl", text: "Cover letter", tone: "file" });
+    return chips;
+  };
 
   return (
     <div className="page dd-page">
       <header className="page-head rise">
         <h1 className="page-title">Your applications</h1>
+        <p className="dd-summary">{summary}</p>
+      </header>
+
+      <div className="dd-toolbar rise" style={{ "--i": 1 }}>
+        <form className="dd-add" onSubmit={addCard}>
+          <label htmlFor="dd-new" className="sr-only">
+            New application
+          </label>
+          <input
+            id="dd-new"
+            className="field-input"
+            type="text"
+            placeholder="Add an application, e.g. Backend Intern at Zoho"
+            value={newTitle}
+            onChange={(e) => setNewTitle(e.target.value)}
+          />
+          <Button type="submit" loading={adding} disabled={!newTitle.trim()}>
+            Add application
+          </Button>
+        </form>
         <div className="dd-sheet-actions">
           <Button variant="ghost" size="sm" onClick={() => setGuideOpen(true)}>
             Import CSV
@@ -260,24 +320,7 @@ export function Tracker() {
             onChange={chooseImportFile}
           />
         </div>
-      </header>
-
-      <form className="dd-add rise" style={{ "--i": 1 }} onSubmit={addCard}>
-        <label htmlFor="dd-new" className="sr-only">
-          New application
-        </label>
-        <input
-          id="dd-new"
-          className="field-input"
-          type="text"
-          placeholder="Add an application, e.g. Backend Intern – Zoho"
-          value={newTitle}
-          onChange={(e) => setNewTitle(e.target.value)}
-        />
-        <Button type="submit" loading={adding} disabled={!newTitle.trim()}>
-          Add
-        </Button>
-      </form>
+      </div>
       <Alert onDismiss={() => setError("")}>{error}</Alert>
       <div className="sr-only" role="status" aria-live="polite">
         {announce}
@@ -285,14 +328,16 @@ export function Tracker() {
 
       {comingUp.length > 0 && (
         <section className="dd-coming rise" aria-labelledby="dd-coming-h">
-          <h2 id="dd-coming-h">Coming up</h2>
+          <h2 id="dd-coming-h">Needs attention</h2>
           <ul>
             {comingUp.map(({ card, kind, days }) => (
               <li key={`${card.id}-${kind}`} className={days < 0 ? "is-overdue" : days <= 1 ? "is-soon" : ""}>
-                <span className="dd-coming-title">{card.title}</span>
-                <span className="dd-coming-when">
-                  {kind === "reminder" ? "Reminder" : "Deadline"} {when(days)}
-                </span>
+                <button type="button" className="dd-coming-item" onClick={() => setOpenId(card.id)}>
+                  <span className="dd-coming-title">{card.company ?? card.title}</span>
+                  <span className="dd-coming-when">
+                    {kind === "reminder" ? "Reminder" : "Closes"} {when(days, kind === "reminder" ? card.remindOn : card.deadline)}
+                  </span>
+                </button>
                 {kind === "reminder" && (
                   <button type="button" className="link-btn" onClick={() => setCardReminder(card, "")}
                     aria-label={`Mark reminder for ${card.title} as done`}>
@@ -304,6 +349,10 @@ export function Tracker() {
           </ul>
         </section>
       )}
+
+      <p className="dd-board-help">
+        Drag cards between stages, or open a card to update its stage, resume, reminder and cover letter.
+      </p>
 
       <div className="dd-board">
         {COLUMNS.map((col) => {
@@ -320,130 +369,75 @@ export function Tracker() {
               }}
               onDrop={(e) => onDrop(e, col)}
             >
-              <h2 id={`col-${col}`}>
-                <span className="dd-dot" aria-hidden="true" />
-                {col}
-                <span className="dd-count">{counts[col]}</span>
-              </h2>
+              <header className="dd-colhead">
+                <h2 id={`col-${col}`}>{col}</h2>
+                <span className="dd-count" aria-label={`${counts[col]} applications`}>{counts[col]}</span>
+                <p>{MEANING[col]}</p>
+              </header>
 
               <div className="dd-cards">
                 {loading && (
-                  <Skeleton height="52px" style={{ borderRadius: 10 }} />
+                  <Skeleton height="64px" style={{ borderRadius: 10 }} />
                 )}
 
                 {!loading && colCards.length === 0 && (
                   <p className="dd-hint">{HINTS[col]}</p>
                 )}
 
-                {colCards.map((card) => (
-                  <div
-                    key={card.id}
-                    className={`dd-card ${dragId === card.id ? "dd-dragging" : ""}`}
-                    draggable
-                    onDragStart={(e) => onDragStart(e, card)}
-                    onDragEnd={onDragEnd}
-                  >
-                    <span className="dd-card-title">{card.title}</span>
-                    <div className="dd-resume">
-                      <label
-                        className="dd-resume-label"
-                        htmlFor={`rs-${card.id}`}
-                      >
-                        Resume sent
-                      </label>
-                      <select
-                        id={`rs-${card.id}`}
-                        className="dd-move dd-resume-select"
-                        value={card.resumeId ?? ""}
-                        onChange={(e) => setCardResume(card, e.target.value)}
-                      >
-                        <option value="">None</option>
-                        {resumes.map((r) => (
-                          <option key={r.id} value={r.id}>
-                            {r.fileName}
-                            {r.current ? " (current)" : ""}
-                          </option>
-                        ))}
-                        {card.resumeId &&
-                          !resumes.some((r) => r.id === card.resumeId) && (
-                            <option value={card.resumeId}>
-                              {card.resumeName}
-                            </option>
-                          )}
-                      </select>
-                    </div>
-                    {card.deadline && card.status !== "Offer" && card.status !== "Rejected" && (
-                      <span className={`dd-deadline tone-${describeDeadline(card.deadline).tone}`}>
-                        {describeDeadline(card.deadline).text}
-                      </span>
-                    )}
-                    <div className="dd-resume">
-                      <label className="dd-resume-label" htmlFor={`rm-${card.id}`}>
-                        Remind me on
-                      </label>
-                      <input
-                        id={`rm-${card.id}`}
-                        type="date"
-                        className="dd-move dd-resume-select"
-                        value={card.remindOn ?? ""}
-                        onChange={(e) => setCardReminder(card, e.target.value)}
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      className={`dd-letter ${card.coverLetter || card.coverLetterId ? "dd-letter--done" : ""}`}
-                      onClick={() => setLetterCardId(card.id)}
-                      aria-label={`${card.coverLetter ? "Edit" : "Write"} cover letter for ${card.title}`}
+                {colCards.map((card) => {
+                  const chips = chipsFor(card);
+                  const name = card.company ?? card.title;
+                  return (
+                    <div
+                      key={card.id}
+                      className={`dd-card ${dragId === card.id ? "dd-dragging" : ""}`}
+                      draggable
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`${name}${card.company && card.role ? `, ${card.role}` : ""}. Open details`}
+                      onClick={() => setOpenId(card.id)}
+                      onKeyDown={(e) => {
+                        if (e.target !== e.currentTarget) return;
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setOpenId(card.id);
+                        }
+                      }}
+                      onDragStart={(e) => onDragStart(e, card)}
+                      onDragEnd={onDragEnd}
                     >
-                      {card.coverLetter || card.coverLetterId ? (
-                        <svg
-                          width="14"
-                          height="14"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2.4"
-                          aria-hidden="true"
-                        >
-                          <path d="M20 6 9 17l-5-5" />
-                        </svg>
-                      ) : null}
-                      {card.coverLetter || card.coverLetterId
-                        ? "Cover letter"
-                        : "Add cover letter"}
-                    </button>
-                    <div className="dd-card-tools">
-                      <label className="sr-only" htmlFor={`mv-${card.id}`}>
-                        Move {card.title} to
-                      </label>
-                      <select
-                        id={`mv-${card.id}`}
-                        className="dd-move"
-                        value={card.status}
-                        onChange={(e) => moveCard(card.id, e.target.value)}
-                      >
-                        {COLUMNS.map((c) => (
-                          <option key={c} value={c}>
-                            {c}
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        type="button"
-                        className="dd-remove"
-                        aria-label={`Remove ${card.title}`}
-                        onClick={() => removeCard(card.id)}
-                      >
-                        ×
-                      </button>
+                      <span className="dd-card-title">{name}</span>
+                      {card.company && card.role && <span className="dd-card-role">{card.role}</span>}
+                      {chips.length > 0 && (
+                        <ul className="dd-chips">
+                          {chips.map((c) => (
+                            <li key={c.key} className={c.tone ? `tone-${c.tone}` : ""}>{c.text}</li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </section>
           );
         })}
       </div>
+
+      <ApplicationDialog
+        card={openCard}
+        stages={COLUMNS}
+        resumes={resumes}
+        onMove={moveCard}
+        onResume={setCardResume}
+        onReminder={setCardReminder}
+        onLetter={(id) => {
+          setOpenId(null);
+          setLetterCardId(id);
+        }}
+        onRemove={removeCard}
+        onClose={() => setOpenId(null)}
+      />
 
       <ImportGuideDialog
         open={guideOpen}

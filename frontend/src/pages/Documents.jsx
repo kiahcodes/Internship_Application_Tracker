@@ -9,12 +9,14 @@ import {
   resumeUsage,
 } from "../utils/resume";
 import { loadStudent } from "../utils/student";
-import { Alert, Button, EmptyState, Skeleton } from "../components/ui.jsx";
+import { Alert, Button, EmptyState, Pagination, Skeleton } from "../components/ui.jsx";
 import { CoverLetterDialog } from "../components/CoverLetterDialog.jsx";
 import { ResumeManager } from "../components/ResumeManager.jsx";
+import { ResumeBuilder } from "../components/ResumeBuilder.jsx";
 import "./Documents.css";
 
 const STAGES = ["Applied", "OA", "Interview", "Offer", "Rejected"];
+const APPLICATIONS_PER_PAGE = 8;
 
 function Doc({ label, name, file, onView, onDownload, children }) {
   return (
@@ -197,7 +199,7 @@ function ApplicationRow({
 
 /** Every resume version, with the companies it was sent to. */
 function ResumeHistory({ resumes, cards, onError }) {
-  const { versions, removed, none: unsent } = resumeUsage(resumes, cards);
+  const { versions, removed } = resumeUsage(resumes, cards);
   const guard = (fn) => () => fn().catch((err) => onError(err.message));
 
   const companies = (list) => (
@@ -269,17 +271,6 @@ function ResumeHistory({ resumes, cards, onError }) {
           {companies(sent)}
         </li>
       ))}
-      {unsent.length > 0 && (
-        <li className="rh-item rh-item--none">
-          <p className="rh-name">No resume recorded</p>
-          <p className="rh-meta">
-            {unsent.length}{" "}
-            {unsent.length === 1 ? "application has" : "applications have"} no
-            resume attached. Pick one under By application below.
-          </p>
-          {companies(unsent)}
-        </li>
-      )}
     </ol>
   );
 }
@@ -294,6 +285,7 @@ export function Documents() {
   const [openId, setOpenId] = useState(null);
   const [letterCardId, setLetterCardId] = useState(null);
   const [stage, setStage] = useState("All");
+  const [applicationPage, setApplicationPage] = useState(1);
 
   const loadCards = useCallback(
     () =>
@@ -344,6 +336,22 @@ export function Documents() {
 
   const withoutResume = cards.filter((c) => !c.resumeId).length;
   const shown = cards.filter((c) => stage === "All" || c.status === stage);
+  const applicationPages = Math.max(1, Math.ceil(shown.length / APPLICATIONS_PER_PAGE));
+  const currentApplicationPage = Math.min(applicationPage, applicationPages);
+  const pageStart = (currentApplicationPage - 1) * APPLICATIONS_PER_PAGE;
+  const visibleApplications = shown.slice(pageStart, pageStart + APPLICATIONS_PER_PAGE);
+
+  const changeStage = (nextStage) => {
+    setStage(nextStage);
+    setApplicationPage(1);
+    setOpenId(null);
+  };
+
+  const changeApplicationPage = (nextPage) => {
+    setApplicationPage(nextPage);
+    setOpenId(null);
+    document.getElementById("docs-by-app")?.scrollIntoView({ block: "start" });
+  };
 
   return (
     <div className="page docs-page">
@@ -353,27 +361,29 @@ export function Documents() {
 
       <Alert onDismiss={() => setError("")}>{error}</Alert>
 
-      <section className="docs-files rise" aria-label="Your files">
+      <dl className="docs-summary rise" aria-label="At a glance">
+        <div>
+          <dt>Resume versions</dt>
+          <dd>{resumes.length}</dd>
+        </div>
+        <div>
+          <dt>Applications</dt>
+          <dd>{loading ? "–" : cards.length}</dd>
+        </div>
+        <div className={!loading && withoutResume ? "docs-summary--warn" : undefined}>
+          <dt>Without a resume</dt>
+          <dd>{loading ? "–" : withoutResume}</dd>
+        </div>
+      </dl>
+
+      <section className="docs-files rise" style={{ "--i": 1 }} aria-label="Your files">
         <ResumeManager kind="resume" onChange={filesChanged(setResumes)} />
         <ResumeManager kind="coverLetter" onChange={filesChanged(setLetters)} />
       </section>
 
-      {!loading && (
-        <dl className="docs-summary rise">
-          <div>
-            <dt>Resume versions</dt>
-            <dd>{resumes.length}</dd>
-          </div>
-          <div>
-            <dt>Applications</dt>
-            <dd>{cards.length}</dd>
-          </div>
-          <div className={withoutResume ? "docs-summary--warn" : undefined}>
-            <dt>Without a resume</dt>
-            <dd>{withoutResume}</dd>
-          </div>
-        </dl>
-      )}
+      <div className="docs-builder rise" style={{ "--i": 2 }}>
+        <ResumeBuilder profile={student} hasResume={resumes.length > 0} />
+      </div>
 
       <section
         className="docs-section rise"
@@ -417,13 +427,20 @@ export function Documents() {
                 type="button"
                 className={`docs-chip ${stage === s ? "docs-chip--on" : ""}`}
                 aria-pressed={stage === s}
-                onClick={() => setStage(s)}
+                onClick={() => changeStage(s)}
               >
                 {s}
               </button>
             ))}
           </div>
         </div>
+
+        {!loading && shown.length > 0 && (
+          <p className="docs-range" aria-live="polite">
+            Showing {pageStart + 1}–{Math.min(pageStart + APPLICATIONS_PER_PAGE, shown.length)} of {shown.length}
+            {stage === "All" ? " applications" : ` ${stage.toLowerCase()} applications`}
+          </p>
+        )}
 
         {loading ? (
           <div className="docs-skel" aria-hidden="true">
@@ -445,21 +462,28 @@ export function Documents() {
         ) : shown.length === 0 ? (
           <p className="docs-none">No {stage.toLowerCase()} applications.</p>
         ) : (
-          <ul className="apps">
-            {shown.map((card) => (
-              <ApplicationRow
-                key={card.id}
-                card={card}
-                resumes={resumes}
-                letters={letters}
-                open={openId === card.id}
-                onToggle={() => setOpenId(openId === card.id ? null : card.id)}
-                onAttach={attach}
-                onEditLetter={(c) => setLetterCardId(c.id)}
-                onError={setError}
-              />
-            ))}
-          </ul>
+          <>
+            <ul className="apps">
+              {visibleApplications.map((card) => (
+                <ApplicationRow
+                  key={card.id}
+                  card={card}
+                  resumes={resumes}
+                  letters={letters}
+                  open={openId === card.id}
+                  onToggle={() => setOpenId(openId === card.id ? null : card.id)}
+                  onAttach={attach}
+                  onEditLetter={(c) => setLetterCardId(c.id)}
+                  onError={setError}
+                />
+              ))}
+            </ul>
+            <Pagination
+              page={currentApplicationPage}
+              pages={applicationPages}
+              onChange={changeApplicationPage}
+            />
+          </>
         )}
       </section>
 

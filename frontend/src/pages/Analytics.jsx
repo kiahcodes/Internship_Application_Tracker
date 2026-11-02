@@ -71,8 +71,6 @@ function Funnel({ data }) {
             rejected.{" "}
           </>
         )}
-        Not every company runs an online assessment, so applications that skip
-        it still count as past it
         {reachedOA === 0 ? "" : "."}
       </p>
     </section>

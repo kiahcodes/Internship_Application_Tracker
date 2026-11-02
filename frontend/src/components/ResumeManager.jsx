@@ -27,8 +27,8 @@ const FILE_KINDS = {
     title: "Cover letters",
     noun: "cover letter",
     versioned: false,
-    hint: "PDF or Word, up to 4 MB. Attach one to each application.",
-    empty: "No cover letters yet. Upload a file, then attach it to an application.",
+    hint: "PDF or Word, up to 4 MB.",
+    empty: "No cover letters yet.",
     uploadFirst: "Upload cover letter",
     uploadNext: "Upload cover letter",
   },
@@ -101,7 +101,12 @@ export function ResumeManager({ kind = "resume", onChange }) {
 
   const viewButton = (v, variant = "ghost") =>
     canPreview(v) && (
-      <Button variant={variant} size="sm" onClick={() => show(v)} aria-label={`View ${v.fileName}`}>
+      <Button
+        variant={variant}
+        size="sm"
+        onClick={() => show(v)}
+        aria-label={`View ${v.fileName}`}
+      >
         View
       </Button>
     );
@@ -110,7 +115,9 @@ export function ResumeManager({ kind = "resume", onChange }) {
     <section className="resume" aria-labelledby={titleId}>
       <div className="resume-top">
         <div>
-          <h2 className="resume-title" id={titleId}>{cfg.title}</h2>
+          <h2 className="resume-title" id={titleId}>
+            {cfg.title}
+          </h2>
           <p className="resume-subtitle">
             {versions.length > 0
               ? cfg.versioned
@@ -148,7 +155,14 @@ export function ResumeManager({ kind = "resume", onChange }) {
           {current && (
             <div className="resume-current">
               <div className="resume-file-icon" aria-hidden="true">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.7"
+                >
                   <path d="M6 2h9l5 5v15H6z" />
                   <path d="M15 2v5h5" />
                 </svg>
@@ -157,11 +171,16 @@ export function ResumeManager({ kind = "resume", onChange }) {
                 <p className="resume-file-name">{current.fileName}</p>
                 <p className="resume-file-detail">
                   <span className="resume-badge">Current</span>
-                  {formatFileSize(current.fileSize)}, uploaded {formatUploadDate(current.uploadedAt)}
+                  {formatFileSize(current.fileSize)}, uploaded{" "}
+                  {formatUploadDate(current.uploadedAt)}
                 </p>
               </div>
               {viewButton(current, "ghost")}
-              <Button variant="soft" size="sm" onClick={() => download(current)}>
+              <Button
+                variant="soft"
+                size="sm"
+                onClick={() => download(current)}
+              >
                 Download
               </Button>
             </div>
@@ -169,14 +188,17 @@ export function ResumeManager({ kind = "resume", onChange }) {
 
           {rest.length > 0 && (
             <div className={current ? "resume-history" : undefined}>
-              {cfg.versioned && <h3 className="resume-history-label">Earlier versions</h3>}
+              {cfg.versioned && (
+                <h3 className="resume-history-label">Earlier versions</h3>
+              )}
               <ul className="resume-history-list">
                 {rest.map((v) => (
                   <li className="resume-history-item" key={v.id}>
                     <div>
                       <p className="resume-file-name">{v.fileName}</p>
                       <p className="resume-file-detail">
-                        {formatFileSize(v.fileSize)}, uploaded {formatUploadDate(v.uploadedAt)}
+                        {formatFileSize(v.fileSize)}, uploaded{" "}
+                        {formatUploadDate(v.uploadedAt)}
                       </p>
                     </div>
                     <div className="resume-history-actions">
@@ -190,7 +212,11 @@ export function ResumeManager({ kind = "resume", onChange }) {
                         </Button>
                       )}
                       {viewButton(v)}
-                      <Button variant="ghost" size="sm" onClick={() => download(v)}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => download(v)}
+                      >
                         Download
                       </Button>
                       <Button
@@ -219,7 +245,8 @@ export function ResumeManager({ kind = "resume", onChange }) {
         onConfirm={removeVersion}
         onCancel={() => setPendingRemove(null)}
       >
-        {pendingRemove && `${pendingRemove.fileName} will be deleted and detached from any application using it. This can't be undone.`}
+        {pendingRemove &&
+          `${pendingRemove.fileName} will be deleted and detached from any application using it. This can't be undone.`}
       </ConfirmDialog>
     </section>
   );

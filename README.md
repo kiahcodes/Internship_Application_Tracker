@@ -55,6 +55,7 @@ Built as a full-stack project: a **React + Vite** frontend, an **Express** API, 
 - Every user has a **unique username** (your public handle).
 - Password reset by one-time link (30 minutes, single use). Show/hide password toggle on every password field.
 - Rich profile: education, CGPA, skills, preferred locations, and links to **GitHub, LinkedIn, portfolio, LeetCode, Codeforces, Google Scholar and ORCID**, and a list of your **projects** (name, link, short description).
+- A **Connected accounts** panel removes manual URL entry: GitHub uses Supabase OAuth; LeetCode, Codeforces, LinkedIn, Scholar and ORCID accept a username or profile link and store a canonical public URL.
 - A **profile-completeness bar** under the navbar shows how much of your profile is filled in.
 - Two roles: **student** and **poster** (can post and manage internships; sign-up needs an invite code).
 - Delete your account (password required) — your data and stored files go with it.
@@ -268,6 +269,7 @@ All routes are under `/api`. Everything except auth and health needs `Authorizat
 |---|---|
 | Auth | `POST /auth/signup` · `POST /auth/login` · `POST /auth/oauth` · `POST /auth/forgot` · `POST /auth/reset` · `GET /auth/me` · `GET /auth/username-available?u=` |
 | Account / profile | `GET` `PUT /profile` · `DELETE /account` |
+| Connectors | `POST /connectors/github` (verifies a Supabase GitHub OAuth token and saves the profile) |
 | Internships | `GET /internships` (filters, sort, paging) · `GET /internships/:id` · `POST` `DELETE /internships/:id/apply` · `POST` `PUT` `DELETE` (posters) |
 | Tracker | `GET` `POST /tracker` · `PATCH` `DELETE /tracker/:id` · `GET /tracker/export` · `POST /tracker/import[?dryRun=1]` |
 | Documents | `/resumes` and `/cover-letters`: list, upload, `PATCH /:id/current`, `GET /:id/download`, `DELETE /:id` |

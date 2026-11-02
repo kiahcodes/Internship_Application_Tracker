@@ -1,0 +1,22 @@
+.rb { margin-top: 1.25rem; border: 1px solid var(--c2c-line); border-radius: 16px; background: var(--c2c-surface); }
+.rb-summary { list-style: none; cursor: pointer; padding: 1.1rem 1.4rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.rb-summary::-webkit-details-marker { display: none; }
+.rb-summary::after { content: "+"; font-size: 1.4rem; font-weight: 700; color: var(--c2c-green); }
+.rb[open] > .rb-summary::after { content: "–"; }
+.rb-summary strong { display: block; font-size: 1.05rem; }
+.rb-summary small { display: block; margin-top: 0.2rem; color: var(--c2c-ink-soft); }
+.rb-body { padding: 0 1.4rem 1.4rem; display: grid; gap: 1rem; }
+.rb-templates { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.8rem; }
+.rb-tpl { display: grid; gap: 0.3rem; align-content: start; padding: 0.9rem 1rem; border: 2px solid var(--c2c-line); border-radius: 12px; cursor: pointer; position: relative; }
+.rb-tpl input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
+.rb-tpl.is-on { border-color: var(--c2c-green); background: var(--c2c-green-tint); }
+.rb-tpl:has(input:focus-visible) { outline: 3px solid var(--c2c-green); outline-offset: 2px; }
+.rb-tpl-name { font-weight: 700; }
+.rb-tpl-blurb { font-size: 0.85rem; line-height: 1.45; color: var(--c2c-ink-soft); }
+.rb-gaps { margin: 0; padding: 0.7rem 0.9rem; border-radius: 10px; background: var(--stage-applied-tint); font-size: 0.9rem; }
+.rb-steps { margin: 0; padding-left: 1.3rem; display: grid; gap: 0.3rem; line-height: 1.5; color: var(--c2c-ink-soft); }
+.rb-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.8rem; }
+.rb-more { font-weight: 700; font-size: 0.9rem; color: var(--c2c-green); text-decoration: none; }
+.rb-more:hover { text-decoration: underline; }
+.rb-note { margin: 0; font-size: 0.82rem; color: var(--c2c-ink-soft); line-height: 1.5; }
+@media (max-width: 720px) { .rb-templates { grid-template-columns: 1fr; } }
