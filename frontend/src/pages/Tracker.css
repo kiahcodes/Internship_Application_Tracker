@@ -1,6 +1,6 @@
 .dd-page .page-head,
 .dd-page > .alert-ui {
-  max-width: 1180px;
+  max-width: 1320px;
 }
 .dd-page .page-head {
   margin-bottom: 1.35rem;
@@ -15,7 +15,7 @@
 
 /* Adding, importing and exporting are one workbench. */
 .dd-toolbar {
-  max-width: 1180px;
+  max-width: 1320px;
   margin: 0 auto 1.1rem;
   padding: 0.75rem;
   display: flex;
@@ -51,7 +51,7 @@
 
 /* Only urgent work interrupts the board. */
 .dd-coming {
-  max-width: 1180px;
+  max-width: 1320px;
   margin: 0 auto 1.1rem;
   padding: 0.8rem 1rem;
   display: grid;
@@ -127,39 +127,28 @@
   font-size: 0.8rem;
 }
 
-.dd-board-help {
-  max-width: 1180px;
-  margin: 0 auto 0.55rem;
-  color: var(--c2c-ink-soft);
-  font-size: 0.82rem;
-}
-
-/* Keep the full pipeline visible on wide screens. */
+/* The board: open columns on the page background, not boxes inside boxes.
+   Stage colour appears once, as a dot beside the name. */
 .dd-board {
-  max-width: 1180px;
-  margin: 0 auto;
-  padding: 0 0 0.8rem;
+  max-width: 1320px;
+  margin: 1.6rem auto 0;
+  padding: 0 0 0.5rem;
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 0.75rem;
-  align-items: stretch;
-  overflow: visible;
+  grid-template-columns: 1.3fr 1fr 1fr 1fr 0.85fr;
+  gap: 2rem;
+  align-items: start;
 }
 .dd-column {
   --accent: var(--stage-applied);
   --tint: var(--stage-applied-tint);
   min-width: 0;
-  height: clamp(23rem, 58vh, 32rem);
-  padding: 0.8rem;
+  padding: 0.4rem;
+  margin: -0.4rem;
   display: flex;
   flex-direction: column;
-  gap: 0.65rem;
-  border: 1px solid var(--c2c-line);
-  border-radius: 12px;
-  background: rgba(255, 253, 249, 0.72);
-  transition:
-    border-color 160ms ease,
-    background 160ms ease;
+  gap: 0.9rem;
+  border-radius: 14px;
+  transition: background 160ms ease;
 }
 .dd-oa {
   --accent: var(--stage-oa);
@@ -176,97 +165,101 @@
 .dd-rejected {
   --accent: var(--stage-rejected);
   --tint: var(--stage-rejected-tint);
-  background: rgba(247, 240, 230, 0.62);
+}
+.dd-rejected .dd-card {
+  opacity: 0.75;
 }
 .dd-over {
-  border-color: var(--accent);
   background: var(--tint);
 }
 .dd-colhead {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 0.15rem 0.5rem;
-  padding: 0.1rem 0.15rem 0.65rem;
-  border-bottom: 2px solid var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0 0.1rem 0.7rem;
+  border-bottom: 1px solid var(--c2c-line-strong);
+}
+.dd-colhead::before {
+  content: "";
+  width: 0.6rem;
+  height: 0.6rem;
+  flex: none;
+  border-radius: 50%;
+  background: var(--accent);
 }
 .dd-colhead h2 {
   margin: 0;
-  font-family: var(--font-display);
-  font-size: 1.08rem;
-  font-weight: 650;
-  color: var(--accent);
-}
-.dd-colhead p {
-  grid-column: 1 / -1;
-  margin: 0;
-  color: var(--c2c-ink-soft);
-  font-size: 0.77rem;
-  line-height: 1.35;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 700;
 }
 .dd-count {
-  min-width: 1.55rem;
-  height: 1.55rem;
-  padding: 0 0.45rem;
-  display: grid;
-  place-items: center;
-  border-radius: 999px;
-  background: var(--tint);
-  color: var(--accent);
-  font-size: 0.75rem;
-  font-weight: 800;
+  margin-left: auto;
+  color: var(--c2c-ink-soft);
+  font-size: 0.85rem;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 .dd-cards {
-  min-height: 0;
-  flex: 1;
-  padding: 1px 3px 2px 1px;
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
+  gap: 0.6rem;
+  /* Long columns scroll on their own so the page stays one screen tall. */
+  max-height: max(24rem, calc(100vh - 31rem));
+  padding: 2px 6px 2px 2px;
+  margin-right: -6px;
   overflow-y: auto;
+  overscroll-behavior: contain;
   scrollbar-width: thin;
   scrollbar-color: var(--c2c-line-strong) transparent;
 }
 .dd-cards > * {
   flex-shrink: 0;
 }
+.dd-cards::-webkit-scrollbar {
+  width: 8px;
+}
+.dd-cards::-webkit-scrollbar-thumb {
+  border-radius: 4px;
+  background: var(--c2c-line-strong);
+}
+.dd-cards::-webkit-scrollbar-thumb:hover {
+  background: var(--c2c-ink-soft);
+}
 .dd-hint {
-  margin: auto 0;
-  padding: 1.25rem 0.55rem;
-  border: 1px dashed var(--c2c-line-strong);
-  border-radius: 9px;
+  margin: 0;
+  padding: 0.3rem 0.1rem;
   color: var(--c2c-ink-soft);
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   line-height: 1.45;
-  text-align: center;
 }
 
 /* Cards are summaries; editing lives in the application dialog. */
 .dd-card {
-  padding: 0.78rem 0.8rem 0.72rem;
+  padding: 0.85rem 0.95rem;
   display: flex;
   flex-direction: column;
-  gap: 0.28rem;
+  gap: 0.15rem;
   border: 1px solid var(--c2c-line);
-  border-left: 3px solid var(--accent);
-  border-radius: 9px;
+  border-radius: 10px;
   background: var(--c2c-surface);
   color: var(--c2c-ink);
   cursor: grab;
-  box-shadow: 0 1px 2px rgba(42, 28, 15, 0.07);
   transition:
     border-color 160ms ease,
     box-shadow 160ms ease,
     opacity 160ms ease;
 }
-.dd-card:hover {
-  border-color: var(--accent);
-  box-shadow: 0 4px 12px rgba(42, 28, 15, 0.09);
+.dd-page .dd-card {
+  box-shadow: none;
+}
+.dd-page .dd-card:not(.dd-dragging):hover {
+  border-color: var(--c2c-line-strong);
+  box-shadow: 0 4px 14px rgba(42, 28, 15, 0.08);
 }
 .dd-card:focus-visible {
   outline: 3px solid color-mix(in srgb, var(--accent) 35%, transparent);
   outline-offset: 1px;
-  border-color: var(--accent);
 }
 .dd-card:active {
   cursor: grabbing;
@@ -275,28 +268,27 @@
   opacity: 0.42;
 }
 .dd-card-title {
-  font-family: var(--font-display);
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 650;
-  line-height: 1.25;
+  line-height: 1.3;
   overflow-wrap: anywhere;
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   overflow: hidden;
 }
-.dd-card-role {
-  color: var(--c2c-ink-soft);
-  font-size: 0.78rem;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+.dd-card-role,
+.dd-card-loc {
+  display: block;
   overflow: hidden;
-  line-height: 1.35;
-  overflow-wrap: anywhere;
+  color: var(--c2c-ink-soft);
+  font-size: 0.82rem;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .dd-chips {
-  margin: 0.42rem 0 0;
+  margin: 0.5rem 0 0;
   padding: 0;
   display: flex;
   flex-wrap: wrap;
@@ -305,13 +297,13 @@
 }
 .dd-chips li {
   max-width: 100%;
-  padding: 0.18rem 0.42rem;
+  padding: 0.15rem 0.45rem;
   overflow: hidden;
   border-radius: 5px;
   background: var(--c2c-cream);
   color: var(--c2c-ink-soft);
-  font-size: 0.68rem;
-  font-weight: 650;
+  font-size: 0.72rem;
+  font-weight: 600;
   line-height: 1.25;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -325,41 +317,9 @@
   color: var(--c2c-danger);
 }
 .dd-chips .tone-file {
-  background: var(--c2c-green-tint);
-  color: var(--c2c-green-deep);
-}
-
-.dd-results {
-  max-width: 1180px;
-  margin: 2rem auto 0;
-  padding-top: 1.2rem;
-  border-top: 1px solid var(--c2c-line-strong);
-}
-.dd-results h2 {
-  margin: 0 0 0.65rem;
-  font-size: 1.2rem;
-  font-weight: 600;
-}
-.dd-results ul {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.dd-results li {
-  padding: 0.72rem 0;
-  display: flex;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 0.3rem 1rem;
-  border-bottom: 1px solid var(--c2c-line);
-}
-.dd-results-name {
-  font-weight: 650;
-  overflow-wrap: anywhere;
-}
-.dd-results-stats {
+  background: transparent;
+  padding-left: 0;
   color: var(--c2c-ink-soft);
-  font-size: 0.88rem;
 }
 
 @media (max-width: 940px) {
@@ -380,7 +340,8 @@
     padding-right: 2rem;
     grid-template-columns: none;
     grid-auto-flow: column;
-    grid-auto-columns: 235px;
+    grid-auto-columns: 250px;
+    gap: 1.25rem;
     overflow-x: auto;
     overscroll-behavior-inline: contain;
     scrollbar-color: var(--c2c-line-strong) transparent;
@@ -416,12 +377,6 @@
   .dd-board {
     margin-right: -1rem;
     padding-right: 1rem;
-  }
-  .dd-column {
-    height: clamp(21rem, 62vh, 30rem);
-  }
-  .dd-results li {
-    display: grid;
   }
 }
 
@@ -541,7 +496,7 @@
 }
 
 .dd-nomatch {
-  max-width: 1180px;
+  max-width: 1320px;
   margin: 0 auto 1rem;
   color: var(--c2c-ink-soft);
 }

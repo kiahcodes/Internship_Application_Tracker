@@ -309,12 +309,6 @@ export function Tracker() {
         tone: days < 0 ? "urgent" : days <= 1 ? "soon" : "",
       });
     }
-    if (card.resumeId || card.resumeName)
-      chips.push({
-        key: "rs",
-        text: card.resumeName ?? "Resume attached",
-        tone: "file",
-      });
     if (card.coverLetter || card.coverLetterId)
       chips.push({ key: "cl", text: "Cover letter", tone: "file" });
     return chips;
@@ -411,11 +405,6 @@ export function Tracker() {
         </section>
       )}
 
-      <p className="dd-board-help">
-        Drag cards between stages, or open a card to update its stage, resume,
-        reminder and cover letter.
-      </p>
-
       {needle && visible.length === 0 && (
         <p className="dd-nomatch" role="status">
           No applications match “{query.trim()}”. Try a company, role or city.
@@ -438,14 +427,13 @@ export function Tracker() {
               onDrop={(e) => onDrop(e, col)}
             >
               <header className="dd-colhead">
-                <h2 id={`col-${col}`}>{col}</h2>
+                <h2 id={`col-${col}`} title={MEANING[col]}>{col}</h2>
                 <span
                   className="dd-count"
                   aria-label={`${counts[col]} applications`}
                 >
                   {counts[col]}
                 </span>
-                <p>{MEANING[col]}</p>
               </header>
 
               <div className="dd-cards">

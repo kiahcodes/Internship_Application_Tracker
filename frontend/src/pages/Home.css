@@ -105,48 +105,6 @@
   line-height: 1.04;
   letter-spacing: -0.03em;
 }
-.workflow-grid {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  align-items: stretch;
-  gap: 1.25rem;
-}
-.workflow-item {
-  min-width: 0;
-  height: 100%;
-  grid-column: span 2;
-  padding: clamp(1.25rem, 2vw, 1.6rem);
-  display: flex;
-  flex-direction: column;
-  gap: 1.2rem;
-  border: 1px solid var(--c2c-line-strong);
-  border-radius: 14px;
-  background: rgba(255, 253, 249, 0.62);
-}
-.workflow-item#track {
-  grid-column: span 4;
-  display: grid;
-  grid-template-columns: minmax(210px, 0.75fr) minmax(0, 1.25fr);
-  align-items: stretch;
-  gap: 1.5rem;
-}
-.workflow-copy {
-  position: relative;
-  max-width: none;
-}
-.workflow-copy h3 {
-  margin: 0;
-  font-size: 1.65rem;
-  font-weight: 500;
-  line-height: 1.08;
-  letter-spacing: -0.02em;
-}
-.workflow-copy > p:not(.workflow-outcome) {
-  margin: 0.8rem 0 0;
-  color: var(--c2c-ink-soft);
-  font-size: 0.83rem;
-  line-height: 1.55;
-}
 .workflow-outcome {
   display: flex;
   align-items: center;
@@ -550,16 +508,6 @@
     grid-template-columns: 1fr;
     gap: 1.6rem;
   }
-  .workflow-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .workflow-item,
-  .workflow-item#track {
-    grid-column: span 1;
-  }
-  .workflow-item#track {
-    grid-column: 1 / -1;
-  }
   .prep-band {
     grid-template-columns: auto 1fr;
   }
@@ -582,17 +530,6 @@
   }
   .workflow-head h2 {
     font-size: 2.35rem;
-  }
-  .workflow-grid {
-    grid-template-columns: 1fr;
-  }
-  .workflow-item,
-  .workflow-item#track,
-  .workflow-item:last-child {
-    grid-column: 1;
-  }
-  .workflow-item#track {
-    display: flex;
   }
   .profile-preview,
   .documents-preview {
@@ -638,12 +575,6 @@
 .pipe-seg--rejected {
   background: #cdbfa6;
 }
-.workflow-visual {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
 .preview-note {
   color: var(--c2c-ink-soft);
   font-size: 0.8rem;
@@ -654,4 +585,121 @@
   min-height: 10rem;
   color: var(--c2c-ink-soft);
   text-align: center;
+}
+
+/* Showcase: topics on the left, one large live screen on the right. */
+.showcase {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.8fr) minmax(0, 1.6fr);
+  gap: clamp(1.5rem, 4vw, 3.5rem);
+  align-items: start;
+}
+.showcase-tabs {
+  display: grid;
+}
+.showcase-tab {
+  border-top: 1px solid var(--c2c-line-strong);
+}
+.showcase-tab:last-child {
+  border-bottom: 1px solid var(--c2c-line-strong);
+}
+.showcase-tab > button {
+  position: relative;
+  width: 100%;
+  padding: 1.05rem 0 1.05rem 1rem;
+  border: 0;
+  background: transparent;
+  color: var(--c2c-ink-soft);
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  text-align: left;
+  cursor: pointer;
+  transition: color 0.18s;
+}
+.showcase-tab > button:hover {
+  color: var(--c2c-ink);
+}
+.showcase-tab.is-on > button {
+  color: var(--c2c-ink);
+}
+.showcase-tab.is-on > button::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 1.1rem;
+  bottom: 1.1rem;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--c2c-green);
+}
+.showcase-detail {
+  padding: 0 0 1.4rem 1rem;
+  display: grid;
+  gap: 0.9rem;
+  justify-items: start;
+}
+.showcase-detail > p:first-child {
+  max-width: 42ch;
+  margin: 0;
+  color: var(--c2c-ink-soft);
+  font-size: 0.98rem;
+  line-height: 1.6;
+}
+.showcase-detail .workflow-outcome {
+  font-size: 0.88rem;
+}
+.showcase-stage {
+  display: grid;
+  gap: 0.6rem;
+}
+.stage-canvas {
+  min-height: 26rem;
+  padding: clamp(1rem, 3vw, 2.25rem);
+  display: grid;
+  align-items: center;
+  border: 1px solid var(--c2c-line-strong);
+  border-radius: 16px;
+  background: #eee5d7;
+  animation: stage-in 0.28s ease-out;
+}
+.stage-canvas .home-preview {
+  width: 100%;
+  max-width: 34rem;
+  margin: 0 auto;
+  zoom: 1.2;
+}
+.stage-canvas .board-preview {
+  max-width: none;
+  zoom: 1.1;
+}
+@keyframes stage-in {
+  from {
+    opacity: 0;
+  }
+}
+@media (max-width: 900px) {
+  .showcase {
+    grid-template-columns: 1fr;
+  }
+  .stage-canvas {
+    min-height: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .stage-canvas {
+    animation: none;
+  }
+}
+
+/* The stage is already the backdrop; previews that bring their own tan box drop it. */
+.stage-canvas .board-preview,
+.stage-canvas .documents-preview {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.stage-canvas .mini-lane {
+  min-height: 190px;
 }

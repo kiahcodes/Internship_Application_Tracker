@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Hero } from "../components/Hero.jsx";
 import { api } from "../utils/api.js";
@@ -390,48 +390,82 @@ const EMPTY = {
   student: () => false,
 };
 
-function WorkflowItem({ item, index, signedIn, data }) {
-  // sample: generic placeholder · error: the user's data failed to load · live: their own data
-  let state = "sample";
-  if (signedIn && data) {
-    const value = data[item.source];
-    state = value == null ? "error" : EMPTY[item.source](value) ? "sample" : "live";
-  }
+// What the preview shows: the user's own data, a generic sample, or a load failure.
+function previewState(item, signedIn, data) {
+  if (!signedIn || !data) return "sample";
+  const value = data[item.source];
+  if (value == null) return "error";
+  return EMPTY[item.source](value) ? "sample" : "live";
+}
+
+/** One stage, five topics: pick a topic on the left and the real screen appears on the right. */
+function Showcase({ signedIn, data }) {
+  const [active, setActive] = useState(0);
+  const tabs = useRef([]);
+  const item = FLOW[active];
+  const state = previewState(item, signedIn, data);
+
+  const onKey = (e) => {
+    const step = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[e.key];
+    if (!step) return;
+    e.preventDefault();
+    const next = (active + step + FLOW.length) % FLOW.length;
+    setActive(next);
+    tabs.current[next]?.focus();
+  };
+
   return (
-    <article
-      className={`workflow-item workflow-item--${index % 2 ? "reverse" : "forward"}`}
-      id={item.id}
-    >
-      <div className="workflow-copy">
-        <h3>{item.title}</h3>
-        <p>{item.body}</p>
-        <div className="workflow-actions">
-          <p className="workflow-outcome">
-            <Icon name="check" />
-            {item.outcome}
-          </p>
-          {signedIn && (
-            <Link to={item.to} className="workflow-link">
-              {item.action}
-            </Link>
+    <div className="showcase">
+      <div className="showcase-tabs" role="tablist" aria-orientation="vertical" aria-label="What Campus2Career does" onKeyDown={onKey}>
+        {FLOW.map((f, i) => (
+          <div key={f.id} className={`showcase-tab ${i === active ? "is-on" : ""}`}>
+            <button
+              ref={(el) => (tabs.current[i] = el)}
+              type="button"
+              role="tab"
+              id={`tab-${f.id}`}
+              aria-selected={i === active}
+              aria-controls="showcase-panel"
+              tabIndex={i === active ? 0 : -1}
+              onClick={() => setActive(i)}
+            >
+              {f.title}
+            </button>
+            {i === active && (
+              <div className="showcase-detail">
+                <p>{f.body}</p>
+                <p className="workflow-outcome">
+                  <Icon name="check" />
+                  {f.outcome}
+                </p>
+                {signedIn && (
+                  <Link to={f.to} className="workflow-link">
+                    {f.action}
+                  </Link>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <div className="showcase-stage" id="showcase-panel" role="tabpanel" aria-labelledby={`tab-${item.id}`}>
+        <div className="stage-canvas" key={item.id}>
+          {state === "error" ? (
+            <div className="home-preview preview-error" role="status">
+              Couldn’t load your data. Refresh to try again.
+            </div>
+          ) : (
+            item.visual(state === "live" ? data : null)
           )}
         </div>
-      </div>
-      <div className={`workflow-visual workflow-visual--${state}`}>
-        {state === "error" ? (
-          <div className="home-preview preview-error" role="status">
-            Couldn’t load your data. Refresh to try again.
-          </div>
-        ) : (
-          item.visual(state === "live" ? data : null)
-        )}
         {state === "sample" && (
           <small className="preview-note">
             {signedIn && data ? "Sample. Yours appears once you add some." : "Sample preview"}
           </small>
         )}
       </div>
-    </article>
+    </div>
   );
 }
 
@@ -478,17 +512,7 @@ export function Home() {
         <header className="workflow-head">
           <h2 id="workflow-title">Everything you need, working together.</h2>
         </header>
-        <div className="workflow-grid">
-          {FLOW.map((item, index) => (
-            <WorkflowItem
-              key={item.id}
-              item={item}
-              index={index}
-              signedIn={signedIn}
-              data={signedIn ? data : null}
-            />
-          ))}
-        </div>
+        <Showcase signedIn={signedIn} data={signedIn ? data : null} />
       </section>
       <PrepBand signedIn={signedIn} />
       {!signedIn && (

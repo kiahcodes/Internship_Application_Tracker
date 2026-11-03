@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { initAnalytics, trackPage } from "./utils/analytics.js";
 import { ProtectedRoute } from "./components/ProtectedRoute.jsx";
 import { Navbar } from "./components/Navbar.jsx";
+import { Footer } from "./components/Footer.jsx";
 import { Home } from "./pages/Home.jsx";
 import { Internship } from "./pages/Internship.jsx";
 import { Profile } from "./pages/Profile.jsx";
@@ -26,6 +27,7 @@ function App() {
   return (
     <main className="main">
       <Navbar />
+      <div className="main-content">
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/home" element={<Navigate to="/" replace />} />
@@ -44,6 +46,8 @@ function App() {
         <Route path="/drag-drop" element={<Navigate to="/tracker" replace />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
+      </div>
+      <Footer />
     </main>
   );
 }

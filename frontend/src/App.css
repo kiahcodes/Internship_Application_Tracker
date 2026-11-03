@@ -3,3 +3,8 @@
   min-height: 100vh;
   min-height: 100dvh;
 }
+
+/* Keeps the footer near the bottom on short pages. */
+.main-content {
+  min-height: 70vh;
+}
