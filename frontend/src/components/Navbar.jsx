@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import logo from "../assets/logo.png";
-import { isAuthenticated, loadSession } from "../utils/auth";
+import { useSession, useSignedIn } from "../utils/auth";
 import { completeness } from "../utils/profileCompleteness";
 import { PROFILE_CHANGED, loadStudent } from "../utils/student";
 import "./Navbar.css";
@@ -9,8 +9,8 @@ import "./Navbar.css";
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   useLocation(); // re-render on navigation so the login state below stays current
-  const loggedIn = isAuthenticated();
-  const initial = (loadSession()?.name || "?").trim().charAt(0).toUpperCase();
+  const loggedIn = useSignedIn();
+  const initial = (useSession()?.name || "?").trim().charAt(0).toUpperCase();
 
   const [percent, setPercent] = useState(null);
 

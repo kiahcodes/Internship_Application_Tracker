@@ -356,7 +356,8 @@ mountInternships(app);
 const CARD_SELECT = `
   SELECT a.id, a.internship_id, a.title, a.status, a.resume_id, a.cover_letter, a.cover_letter_id,
          COALESCE(r.file_name, a.resume_file_name) AS resume_name, cl.file_name AS cover_letter_name,
-         COALESCE(i.company, a.company) AS company, COALESCE(i.role, a.role) AS role, i.description,
+         COALESCE(i.company, a.company) AS company, COALESCE(i.role, a.role) AS role,
+         COALESCE(i.location, a.location) AS location, i.description,
          COALESCE(i.url, a.link) AS posting_url,
          COALESCE(to_char(i.deadline, 'YYYY-MM-DD'), to_char(a.deadline, 'YYYY-MM-DD')) AS deadline,
          to_char(a.remind_on, 'YYYY-MM-DD') AS remind_on
@@ -377,6 +378,8 @@ const toCard = (r) => ({
   // Posting details, when the card came from a listing (null for hand-added cards).
   company: r.company ?? null,
   role: r.role ?? null,
+  location: r.location ?? null,
+  editable: r.internship_id == null,
   description: r.description ?? null,
   postingUrl: r.posting_url ?? null,
   deadline: r.deadline ?? null,
@@ -394,7 +397,7 @@ app.get("/api/tracker", requireAuth, h(async (req, res) => {
 // ---------- Spreadsheet export / import ----------
 app.get("/api/tracker/export", requireAuth, h(async (req, res) => {
   const [rows] = await pool.query(
-    `SELECT a.title, a.status, COALESCE(i.company, a.company) AS company, COALESCE(i.role, a.role) AS role,
+    `SELECT a.title, a.status, COALESCE(i.company, a.company) AS company, COALESCE(i.role, a.role) AS role, COALESCE(i.location, a.location) AS location,
             COALESCE(r.file_name, a.resume_file_name) AS resume,
             (a.cover_letter IS NOT NULL OR a.cover_letter_id IS NOT NULL) AS letter,
             to_char(a.created_at, 'YYYY-MM-DD') AS applied_on,
@@ -407,10 +410,10 @@ app.get("/api/tracker/export", requireAuth, h(async (req, res) => {
     [req.userId],
   );
   const csv = toCsv(
-    ["Title", "Company", "Role", "Status", "Applied on", "Deadline", "Remind on", "Resume", "Cover letter", "Link"],
-    rows.map((r) => [r.title, r.company, r.role, r.status, r.applied_on, r.deadline, r.remind_on, r.resume,
+    ["Title", "Company", "Role", "Location", "Status", "Applied on", "Deadline", "Remind on", "Resume", "Cover letter", "Link"],
+    rows.map((r) => [r.title, r.company, r.role, r.location, r.status, r.applied_on, r.deadline, r.remind_on, r.resume,
       r.letter ? "Yes" : "No", r.url]),
-    [0, 1, 2, 7, 9], // free-text columns, guarded against spreadsheet formulas
+    [0, 1, 2, 3, 8, 10], // free-text columns, guarded against spreadsheet formulas
   );
   res.set({
     "Content-Type": "text/csv; charset=utf-8",
@@ -440,9 +443,9 @@ app.post("/api/tracker/import", requireAuth, express.text({ type: ["text/csv", "
       await conn.beginTransaction();
       for (const r of fresh) {
         await conn.query(
-          `INSERT INTO applications (user_id, title, status, deadline, remind_on, link, company, role, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, COALESCE((?::text || ' 12:00:00')::timestamptz, NOW()))`,
-          [req.userId, r.title, r.status, r.deadline, r.remind_on, r.link, r.company, r.role, r.applied_on],
+          `INSERT INTO applications (user_id, title, status, deadline, remind_on, link, company, role, location, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((?::text || ' 12:00:00')::timestamptz, NOW()))`,
+          [req.userId, r.title, r.status, r.deadline, r.remind_on, r.link, r.company, r.role, r.location, r.applied_on],
         );
       }
       await conn.commit();
@@ -458,23 +461,42 @@ app.post("/api/tracker/import", requireAuth, express.text({ type: ["text/csv", "
     skipped: skipped.sort((a, b) => a.line - b.line),
     warnings: parsed.warnings,
     ignored: parsed.ignored,
-    preview: fresh.slice(0, 8).map(({ title, company, role, status, applied_on, deadline }) => ({ title, company, role, status, applied_on, deadline })),
+    preview: fresh.slice(0, 8).map(({ title, company, role, location, status, applied_on, deadline }) => ({ title, company, role, location, status, applied_on, deadline })),
     dryRun: req.query.dryRun === "1",
   });
 }));
 
+// Free-text details a person types about an application. Returns { error } or the cleaned values.
+function cleanDetails(body, requireOne) {
+  const text = (key, max) => (body[key] === undefined ? undefined : String(body[key] ?? "").trim().slice(0, max) || null);
+  const out = { company: text("company", 100), role: text("role", 150), location: text("location", 100) };
+  out.link = text("link", 500);
+  // "zoho.com/jobs" is fine: assume https when no scheme is typed.
+  if (out.link && !/^[a-z][a-z0-9+.-]*:/i.test(out.link)) out.link = `https://${out.link}`;
+  if (out.link && !/^https?:\/\/[^\s/]+\.[^\s/]+\S*$/i.test(out.link)) return { error: "That link doesn't look like a web address" };
+  if (body.deadline !== undefined) {
+    const d = body.deadline === null || body.deadline === "" ? null : parseDate(body.deadline);
+    if (d === undefined) return { error: "Deadline must be a date" };
+    out.deadline = d;
+  }
+  if (requireOne && !out.company && !out.role) return { error: "Add a company or a role" };
+  return out;
+}
+
 app.post("/api/tracker", requireAuth, h(async (req, res) => {
-  const title = String(req.body.title || "").trim();
   const status = req.body.status || "Applied";
-  if (!title) return res.status(400).json({ error: "Title is required" });
   if (!STATUSES.includes(status)) return res.status(400).json({ error: "Invalid status" });
+  const d = cleanDetails(req.body, false);
+  if (d.error) return res.status(400).json({ error: d.error });
+  const title = (String(req.body.title || "").trim() || [d.role, d.company].filter(Boolean).join(" – ")).slice(0, 255);
+  if (!title) return res.status(400).json({ error: "Add a company or a role" });
   const [result] = await pool.query(
-    `INSERT INTO applications (user_id, title, status, resume_id, resume_file_name)
-     SELECT ?::int, ?::text, ?::text, r.id, r.file_name
+    `INSERT INTO applications (user_id, title, status, company, role, location, link, deadline, resume_id, resume_file_name)
+     SELECT ?::int, ?::text, ?::text, ?::text, ?::text, ?::text, ?::text, ?::date, r.id, r.file_name
      FROM (SELECT 1) one
      LEFT JOIN resumes r ON r.user_id = ? AND r.is_current AND r.kind = 'resume'
      RETURNING id`,
-    [req.userId, title.slice(0, 255), status, req.userId],
+    [req.userId, title, status, d.company ?? null, d.role ?? null, d.location ?? null, d.link ?? null, d.deadline ?? null, req.userId],
   );
   const [rows] = await pool.query(`${CARD_SELECT} WHERE a.id = ?`, [result.insertId]);
   res.status(201).json(toCard(rows[0]));
@@ -531,6 +553,16 @@ app.patch("/api/tracker/:id", requireAuth, h(async (req, res) => {
     if (date === undefined) return res.status(400).json({ error: "Reminder must be a date" });
     sets.push("remind_on = ?");
     params.push(date);
+  }
+  if (["company", "role", "location", "link", "deadline"].some((k) => req.body[k] !== undefined)) {
+    const d = cleanDetails(req.body, false);
+    if (d.error) return res.status(400).json({ error: d.error });
+    for (const k of ["company", "role", "location", "link", "deadline"]) {
+      if (d[k] !== undefined) {
+        sets.push(`${k} = ?`);
+        params.push(d[k]);
+      }
+    }
   }
   if (!sets.length) return res.status(400).json({ error: "Nothing to update" });
 

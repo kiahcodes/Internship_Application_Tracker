@@ -1,4 +1,12 @@
+import { useSyncExternalStore } from "react";
+
 export const AUTH_STORAGE_KEY = "auth.session";
+export const AUTH_CHANGED = "auth:changed";
+
+// Tells mounted components (navbar, home) that the session changed, so they re-render
+// without a page refresh. The "storage" event covers other tabs.
+const announce = () => window.dispatchEvent(new Event(AUTH_CHANGED));
+
 
 export function loadSession() {
   try {
@@ -16,6 +24,7 @@ export function getToken() {
 function saveSession({ token, user }) {
   const session = { token, ...user };
   localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
+  announce();
   return session;
 }
 
@@ -87,10 +96,12 @@ export const resetPassword = ({ token, password }) => plainRequest("reset", { to
 export function setSessionName(name) {
   const session = loadSession();
   if (session) localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ ...session, name }));
+  announce();
 }
 
 export function clearSession() {
   localStorage.removeItem(AUTH_STORAGE_KEY);
+  announce();
 }
 
 export const logout = clearSession;
@@ -103,3 +114,25 @@ export const getRole = () => loadSession()?.role ?? null;
 
 export const hasPermission = (permission) =>
   loadSession()?.permissions?.includes(permission) ?? false;
+
+function subscribe(callback) {
+  window.addEventListener(AUTH_CHANGED, callback);
+  window.addEventListener("storage", callback);
+  return () => {
+    window.removeEventListener(AUTH_CHANGED, callback);
+    window.removeEventListener("storage", callback);
+  };
+}
+
+// Re-renders the component whenever the user signs in or out.
+export const useSignedIn = () => useSyncExternalStore(subscribe, isAuthenticated);
+
+// The raw string is a stable snapshot; parse it once per change.
+export function useSession() {
+  const raw = useSyncExternalStore(subscribe, () => localStorage.getItem(AUTH_STORAGE_KEY));
+  try {
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}

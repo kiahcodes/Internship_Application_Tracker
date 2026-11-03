@@ -9,6 +9,7 @@ const HEADERS = {
   title: ["title", "application", "applications", "name", "internship"],
   company: ["company", "company name", "organisation", "organization", "employer", "firm"],
   role: ["role", "job role", "position", "job", "job title", "designation", "profile"],
+  location: ["location", "city", "place", "work location", "job location"],
   status: ["status", "stage", "state", "progress", "result"],
   applied: ["applied on", "application date", "date applied", "applied date", "applied", "date"],
   deadline: ["deadline", "due", "due date", "last date", "apply by", "closing date"],
@@ -143,6 +144,7 @@ export function normalizeImport(text) {
     rows.push({
       line, title, status, ...dates, link: link || null,
       company: get("company").slice(0, 100) || null, role: get("role").slice(0, 150) || null,
+      location: get("location").slice(0, 100) || null,
     });
   });
   return { rows, skipped, warnings, ignored };

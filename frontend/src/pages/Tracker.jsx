@@ -7,6 +7,7 @@ import { ImportDialog } from "../components/ImportDialog.jsx";
 import { ImportGuideDialog } from "../components/ImportGuideDialog.jsx";
 import { Alert, Button, Skeleton } from "../components/ui.jsx";
 import { daysUntil, describeDeadline, formatDay } from "../utils/internships";
+import { NewApplicationDialog } from "../components/NewApplicationDialog.jsx";
 import { ApplicationDialog } from "../components/ApplicationDialog.jsx";
 import "./Tracker.css";
 
@@ -20,23 +21,23 @@ const MEANING = {
   Rejected: "Closed",
 };
 const HINTS = {
-  Applied: "Applications you've sent land here.",
-  OA: "Online assessments and coding tests go here.",
+  Applied: "Applications you've sent.",
+  OA: "Online assessments and coding tests.",
   Interview: "Drag a card here once you get an interview.",
-  Offer: "Your wins. Hopefully a long list.",
-  Rejected: "Keep these. They still show up in your analytics.",
+  Offer: "Your wins.",
+  Rejected: "Keep these. They show up in your analytics.",
 };
 
 export function Tracker() {
   const [cards, setCards] = useState([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
+  const [query, setQuery] = useState("");
   const [announce, setAnnounce] = useState("");
   const [resumes, setResumes] = useState([]);
   const [student, setStudent] = useState(null);
   const [letterCardId, setLetterCardId] = useState(null);
   const [error, setError] = useState("");
-  const [newTitle, setNewTitle] = useState("");
   const [dragId, setDragId] = useState(null);
   const [overCol, setOverCol] = useState(null);
   const [importReport, setImportReport] = useState(null);
@@ -60,21 +61,35 @@ export function Tracker() {
       .catch(() => {}); // drafts just skip personal details without it
   }, []);
 
-  const addCard = async (e) => {
-    e.preventDefault();
-    const title = newTitle.trim();
-    if (!title) return;
-    setAdding(true);
-    try {
-      const card = await api("/tracker", { method: "POST", body: { title } });
-      setCards((prev) => [...prev, card]);
-      setNewTitle("");
-      setError("");
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setAdding(false);
-    }
+  const addCard = async (form) => {
+    const card = await api("/tracker", {
+      method: "POST",
+      body: Object.fromEntries(
+        Object.entries(form).map(([k, v]) => [k, typeof v === "string" ? v.trim() : v]),
+      ),
+    });
+    setCards((prev) => [...prev, card]);
+    setError("");
+    setAnnounce("Application added");
+  };
+
+  const saveDetails = async (card, details) => {
+    const saved = await api(`/tracker/${card.id}`, { method: "PATCH", body: details });
+    setCards((prev) =>
+      prev.map((c) =>
+        c.id === card.id
+          ? {
+              ...c,
+              company: saved.company ?? details.company ?? null,
+              role: details.role || null,
+              location: details.location || null,
+              postingUrl: details.link || null,
+              deadline: details.deadline || null,
+            }
+          : c,
+      ),
+    );
+    setAnnounce("Details saved");
   };
 
   const removeCard = async (id) => {
@@ -121,13 +136,21 @@ export function Tracker() {
     const remindOn = value || null;
     const previous = card.remindOn;
     const apply = (next) =>
-      setCards((prev) => prev.map((c) => (c.id === card.id ? { ...c, remindOn: next } : c)));
+      setCards((prev) =>
+        prev.map((c) => (c.id === card.id ? { ...c, remindOn: next } : c)),
+      );
     apply(remindOn);
-    setAnnounce(remindOn ? `${card.title}: reminder set` : `${card.title}: reminder cleared`);
-    api(`/tracker/${card.id}`, { method: "PATCH", body: { remindOn } }).catch((err) => {
-      apply(previous);
-      setError(err.message);
-    });
+    setAnnounce(
+      remindOn
+        ? `${card.title}: reminder set`
+        : `${card.title}: reminder cleared`,
+    );
+    api(`/tracker/${card.id}`, { method: "PATCH", body: { remindOn } }).catch(
+      (err) => {
+        apply(previous);
+        setError(err.message);
+      },
+    );
   };
 
   // Reminders you set (until you clear them) and deadlines still ahead, soonest first.
@@ -136,18 +159,27 @@ export function Tracker() {
       const items = [];
       if (c.remindOn && c.status !== "Rejected" && daysUntil(c.remindOn) <= 7)
         items.push({ card: c, kind: "reminder", days: daysUntil(c.remindOn) });
-      if (c.deadline && c.status === "Applied" && daysUntil(c.deadline) >= 0 && daysUntil(c.deadline) <= 7)
+      if (
+        c.deadline &&
+        c.status === "Applied" &&
+        daysUntil(c.deadline) >= 0 &&
+        daysUntil(c.deadline) <= 7
+      )
         items.push({ card: c, kind: "deadline", days: daysUntil(c.deadline) });
       return items;
     })
     .sort((a, b) => a.days - b.days)
     .slice(0, 8);
   const when = (days, iso) =>
-    days < 0 ? `${-days} ${days === -1 ? "day" : "days"} overdue`
-    : days === 0 ? "today"
-    : days === 1 ? "tomorrow"
-    : days <= 7 ? `in ${days} days`
-    : `on ${formatDay(iso)}`;
+    days < 0
+      ? `${-days} ${days === -1 ? "day" : "days"} overdue`
+      : days === 0
+        ? "today"
+        : days === 1
+          ? "tomorrow"
+          : days <= 7
+            ? `in ${days} days`
+            : `on ${formatDay(iso)}`;
 
   async function exportCsv() {
     try {
@@ -168,10 +200,15 @@ export function Tracker() {
     e.target.value = ""; // so choosing the same file again still fires
     if (!file) return;
     setGuideOpen(false);
-    if (file.size > 1024 * 1024) return setError("That file is over 1 MB. Export a smaller sheet or split it.");
+    if (file.size > 1024 * 1024)
+      return setError(
+        "That file is over 1 MB. Export a smaller sheet or split it.",
+      );
     try {
       const text = await file.text();
-      setImportReport(await api("/tracker/import?dryRun=1", { method: "POST", body: text }));
+      setImportReport(
+        await api("/tracker/import?dryRun=1", { method: "POST", body: text }),
+      );
       setImportText(text);
       setImportFile(file.name);
     } catch (err) {
@@ -182,7 +219,10 @@ export function Tracker() {
   async function confirmImport() {
     setImporting(true);
     try {
-      const done = await api("/tracker/import", { method: "POST", body: importText });
+      const done = await api("/tracker/import", {
+        method: "POST",
+        body: importText,
+      });
       setCards(await api("/tracker"));
       setAnnounce(`Imported ${done.added} applications`);
       setImportReport(null);
@@ -192,21 +232,6 @@ export function Tracker() {
       setImporting(false);
     }
   }
-
-  // Which resume version got how far? "Reached interview" counts Interview and Offer.
-  const resumeResults = resumes
-    .map((r) => {
-      const used = cards.filter((c) => c.resumeId === r.id);
-      return {
-        ...r,
-        sent: used.length,
-        interviews: used.filter(
-          (c) => c.status === "Interview" || c.status === "Offer",
-        ).length,
-        offers: used.filter((c) => c.status === "Offer").length,
-      };
-    })
-    .filter((r) => r.sent > 0);
 
   const onDragStart = (e, card) => {
     e.dataTransfer.setData("text/plain", String(card.id));
@@ -248,13 +273,19 @@ export function Tracker() {
     onDragEnd();
   };
 
+  const needle = query.trim().toLowerCase();
+  const visible = needle
+    ? cards.filter((c) =>
+        [c.title, c.company, c.role, c.location].some((v) => v?.toLowerCase().includes(needle)),
+      )
+    : cards;
   const counts = Object.fromEntries(
     COLUMNS.map((c) => [c, cards.filter((card) => card.status === c).length]),
   );
   const inPlay = counts.Applied + counts.OA + counts.Interview;
   const summary =
     cards.length === 0
-      ? "Nothing here yet. Add your first application below, or import the spreadsheet you already keep."
+      ? "Nothing here yet. Add your first application, or import the spreadsheet you already keep."
       : `${inPlay} still in play, ${counts.Offer} ${counts.Offer === 1 ? "offer" : "offers"}, ${counts.Rejected} closed.`;
   const openCard = cards.find((c) => c.id === openId) ?? null;
 
@@ -262,7 +293,11 @@ export function Tracker() {
   const chipsFor = (card) => {
     const chips = [];
     const open = card.status !== "Offer" && card.status !== "Rejected";
-    if (card.deadline && card.status === "Applied" && daysUntil(card.deadline) >= 0) {
+    if (
+      card.deadline &&
+      card.status === "Applied" &&
+      daysUntil(card.deadline) >= 0
+    ) {
       const d = describeDeadline(card.deadline);
       chips.push({ key: "dl", text: d.text, tone: d.tone });
     }
@@ -274,8 +309,14 @@ export function Tracker() {
         tone: days < 0 ? "urgent" : days <= 1 ? "soon" : "",
       });
     }
-    if (card.resumeId || card.resumeName) chips.push({ key: "rs", text: card.resumeName ?? "Resume attached", tone: "file" });
-    if (card.coverLetter || card.coverLetterId) chips.push({ key: "cl", text: "Cover letter", tone: "file" });
+    if (card.resumeId || card.resumeName)
+      chips.push({
+        key: "rs",
+        text: card.resumeName ?? "Resume attached",
+        tone: "file",
+      });
+    if (card.coverLetter || card.coverLetterId)
+      chips.push({ key: "cl", text: "Cover letter", tone: "file" });
     return chips;
   };
 
@@ -287,27 +328,30 @@ export function Tracker() {
       </header>
 
       <div className="dd-toolbar rise" style={{ "--i": 1 }}>
-        <form className="dd-add" onSubmit={addCard}>
-          <label htmlFor="dd-new" className="sr-only">
-            New application
+        <div className="dd-search">
+          <label htmlFor="dd-search" className="sr-only">
+            Search applications
           </label>
           <input
-            id="dd-new"
+            id="dd-search"
             className="field-input"
-            type="text"
-            placeholder="Add an application, e.g. Backend Intern at Zoho"
-            value={newTitle}
-            onChange={(e) => setNewTitle(e.target.value)}
+            type="search"
+            placeholder="Search by company, role or location"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
           />
-          <Button type="submit" loading={adding} disabled={!newTitle.trim()}>
-            Add application
-          </Button>
-        </form>
+        </div>
+        <Button onClick={() => setAdding(true)}>Add application</Button>
         <div className="dd-sheet-actions">
           <Button variant="ghost" size="sm" onClick={() => setGuideOpen(true)}>
             Import CSV
           </Button>
-          <Button variant="ghost" size="sm" onClick={exportCsv} disabled={cards.length === 0}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={exportCsv}
+            disabled={cards.length === 0}
+          >
             Export CSV
           </Button>
           <input
@@ -331,16 +375,33 @@ export function Tracker() {
           <h2 id="dd-coming-h">Needs attention</h2>
           <ul>
             {comingUp.map(({ card, kind, days }) => (
-              <li key={`${card.id}-${kind}`} className={days < 0 ? "is-overdue" : days <= 1 ? "is-soon" : ""}>
-                <button type="button" className="dd-coming-item" onClick={() => setOpenId(card.id)}>
-                  <span className="dd-coming-title">{card.company ?? card.title}</span>
+              <li
+                key={`${card.id}-${kind}`}
+                className={days < 0 ? "is-overdue" : days <= 1 ? "is-soon" : ""}
+              >
+                <button
+                  type="button"
+                  className="dd-coming-item"
+                  onClick={() => setOpenId(card.id)}
+                >
+                  <span className="dd-coming-title">
+                    {card.company ?? card.title}
+                  </span>
                   <span className="dd-coming-when">
-                    {kind === "reminder" ? "Reminder" : "Closes"} {when(days, kind === "reminder" ? card.remindOn : card.deadline)}
+                    {kind === "reminder" ? "Reminder" : "Closes"}{" "}
+                    {when(
+                      days,
+                      kind === "reminder" ? card.remindOn : card.deadline,
+                    )}
                   </span>
                 </button>
                 {kind === "reminder" && (
-                  <button type="button" className="link-btn" onClick={() => setCardReminder(card, "")}
-                    aria-label={`Mark reminder for ${card.title} as done`}>
+                  <button
+                    type="button"
+                    className="link-btn"
+                    onClick={() => setCardReminder(card, "")}
+                    aria-label={`Mark reminder for ${card.title} as done`}
+                  >
                     Done
                   </button>
                 )}
@@ -351,12 +412,19 @@ export function Tracker() {
       )}
 
       <p className="dd-board-help">
-        Drag cards between stages, or open a card to update its stage, resume, reminder and cover letter.
+        Drag cards between stages, or open a card to update its stage, resume,
+        reminder and cover letter.
       </p>
+
+      {needle && visible.length === 0 && (
+        <p className="dd-nomatch" role="status">
+          No applications match “{query.trim()}”. Try a company, role or city.
+        </p>
+      )}
 
       <div className="dd-board">
         {COLUMNS.map((col) => {
-          const colCards = cards.filter((c) => c.status === col);
+          const colCards = visible.filter((c) => c.status === col);
           return (
             <section
               key={col}
@@ -371,7 +439,12 @@ export function Tracker() {
             >
               <header className="dd-colhead">
                 <h2 id={`col-${col}`}>{col}</h2>
-                <span className="dd-count" aria-label={`${counts[col]} applications`}>{counts[col]}</span>
+                <span
+                  className="dd-count"
+                  aria-label={`${counts[col]} applications`}
+                >
+                  {counts[col]}
+                </span>
                 <p>{MEANING[col]}</p>
               </header>
 
@@ -380,7 +453,7 @@ export function Tracker() {
                   <Skeleton height="64px" style={{ borderRadius: 10 }} />
                 )}
 
-                {!loading && colCards.length === 0 && (
+                {!loading && colCards.length === 0 && !needle && (
                   <p className="dd-hint">{HINTS[col]}</p>
                 )}
 
@@ -407,11 +480,21 @@ export function Tracker() {
                       onDragEnd={onDragEnd}
                     >
                       <span className="dd-card-title">{name}</span>
-                      {card.company && card.role && <span className="dd-card-role">{card.role}</span>}
+                      {card.company && card.role && (
+                        <span className="dd-card-role">{card.role}</span>
+                      )}
+                      {card.location && (
+                        <span className="dd-card-loc">{card.location}</span>
+                      )}
                       {chips.length > 0 && (
                         <ul className="dd-chips">
                           {chips.map((c) => (
-                            <li key={c.key} className={c.tone ? `tone-${c.tone}` : ""}>{c.text}</li>
+                            <li
+                              key={c.key}
+                              className={c.tone ? `tone-${c.tone}` : ""}
+                            >
+                              {c.text}
+                            </li>
                           ))}
                         </ul>
                       )}
@@ -424,7 +507,15 @@ export function Tracker() {
         })}
       </div>
 
+      <NewApplicationDialog
+        open={adding}
+        stages={COLUMNS}
+        onSave={addCard}
+        onClose={() => setAdding(false)}
+      />
+
       <ApplicationDialog
+        onDetails={saveDetails}
         card={openCard}
         stages={COLUMNS}
         resumes={resumes}
@@ -458,26 +549,6 @@ export function Tracker() {
         onSaved={saveCoverLetter}
         onClose={() => setLetterCardId(null)}
       />
-
-      {resumeResults.length > 0 && (
-        <section className="dd-results" aria-labelledby="dd-results-h">
-          <h2 id="dd-results-h">How each resume is doing</h2>
-          <ul>
-            {resumeResults.map((r) => (
-              <li key={r.id}>
-                <span className="dd-results-name">
-                  {r.fileName}
-                  {r.current && <span className="resume-badge">Current</span>}
-                </span>
-                <span className="dd-results-stats">
-                  Sent to {r.sent} · {r.interviews} reached interview ·{" "}
-                  {r.offers} {r.offers === 1 ? "offer" : "offers"}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
     </div>
   );
 }

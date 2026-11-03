@@ -123,6 +123,7 @@ CREATE TABLE IF NOT EXISTS applications (
 ALTER TABLE applications ADD COLUMN IF NOT EXISTS link VARCHAR(500) NULL;
 ALTER TABLE applications ADD COLUMN IF NOT EXISTS company VARCHAR(100) NULL;
 ALTER TABLE applications ADD COLUMN IF NOT EXISTS role VARCHAR(150) NULL;
+ALTER TABLE applications ADD COLUMN IF NOT EXISTS location VARCHAR(100) NULL;
 
 -- Every move between stages, so analytics can measure how long replies take.
 CREATE TABLE IF NOT EXISTS application_events (
