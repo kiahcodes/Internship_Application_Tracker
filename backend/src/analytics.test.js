@@ -85,3 +85,17 @@ test("source labels", () => {
   const labels = computeAnalytics(apps, [], NOW).bySource.map((g) => g.label).sort();
   assert.deepEqual(labels, ["Added by hand", "Internshala", "Posted on Campus2Career"]);
 });
+
+test("byStatus counts current stage, and stale flags old Applied cards with no reply", () => {
+  const apps = [
+    app(1, "Applied", "2026-09-01"), // 47 days old
+    app(2, "Applied", "2026-10-15"), // recent
+    app(3, "Interview", "2026-09-01"), // old but moved on
+    app(4, "Rejected", "2026-09-01"),
+  ];
+  const r = computeAnalytics(apps, [], NOW);
+  assert.deepEqual(r.byStatus.map((s) => [s.status, s.count]), [
+    ["Applied", 2], ["OA", 0], ["Interview", 1], ["Offer", 0], ["Rejected", 1],
+  ]);
+  assert.equal(r.stale, 1);
+});

@@ -4,6 +4,7 @@
 export const STAGES = ["Applied", "OA", "Interview", "Offer"]; // the funnel, in order
 const RANK = { Applied: 0, OA: 1, Interview: 2, Offer: 3 };
 const DAY = 24 * 60 * 60 * 1000;
+export const STALE_DAYS = 14; // an Applied card this old with no reply is worth a follow-up
 export const SMALL_SAMPLE = 5; // groups smaller than this are flagged, not compared
 
 const toDate = (v) => (v instanceof Date ? v : new Date(v));
@@ -122,6 +123,13 @@ export function computeAnalytics(apps, events, now = new Date()) {
     total,
     funnel,
     rejected: apps.filter((a) => a.status === "Rejected").length,
+    // Where applications sit right now (the funnel above is how far they ever got).
+    byStatus: ["Applied", "OA", "Interview", "Offer", "Rejected"].map((status) => ({
+      status,
+      count: apps.filter((a) => a.status === status).length,
+    })),
+    // Still at Applied with no recorded reply after STALE_DAYS.
+    stale: apps.filter((a) => a.status === "Applied" && now - toDate(a.created_at) > STALE_DAYS * DAY).length,
     response: {
       responded,
       rate: pct(responded, total),

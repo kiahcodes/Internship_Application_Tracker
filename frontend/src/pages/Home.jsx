@@ -77,13 +77,13 @@ function PersonalBrief({ data }) {
             {stages
               .filter((s) => s.n)
               .map((s) => (
-                <span key={s.stage} className={`seg seg--${s.stage.toLowerCase()}`} style={{ flexGrow: s.n }} />
+                <span key={s.stage} className={`pipe-seg pipe-seg--${s.stage.toLowerCase()}`} style={{ flexGrow: s.n }} />
               ))}
           </div>
           <figcaption>
             {stages.map((s) => (
               <span key={s.stage} className={s.n ? "" : "is-zero"}>
-                <i className={`dot seg--${s.stage.toLowerCase()}`} aria-hidden="true" />
+                <i className={`pipe-dot pipe-seg--${s.stage.toLowerCase()}`} aria-hidden="true" />
                 {s.stage} <b>{s.n}</b>
               </span>
             ))}

@@ -38,22 +38,22 @@
   gap: 3px;
   height: 2.6rem;
 }
-.seg {
+.pipe-seg {
   min-width: 10px;
   border-radius: 4px;
   background: var(--c2c-green);
 }
-.seg--applied {
+.pipe-seg--applied {
   background: #a3cfaa;
   box-shadow: inset 0 0 0 1px #6fae7b; /* keeps the lightest stage visible on cream */
 }
-.seg--oa {
+.pipe-seg--oa {
   background: #7fb98a;
 }
-.seg--interview {
+.pipe-seg--interview {
   background: #3f8f4d;
 }
-.seg--offer {
+.pipe-seg--offer {
   background: var(--c2c-green-deep);
 }
 .brief-pipeline figcaption {
@@ -71,7 +71,7 @@
 .brief-pipeline .is-zero {
   opacity: 0.55;
 }
-.dot {
+.pipe-dot {
   display: inline-block;
   width: 0.65rem;
   height: 0.65rem;
@@ -635,7 +635,7 @@
 .home-brief--loading {
   min-height: 9.5rem;
 }
-.seg--rejected {
+.pipe-seg--rejected {
   background: #cdbfa6;
 }
 .workflow-visual {

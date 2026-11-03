@@ -590,13 +590,16 @@ mountPrep(app);
 
 // ---------- Analytics ----------
 app.get("/api/analytics", requireAuth, h(async (req, res) => {
+  // ?days=30 limits everything to applications created in that window; omitted means all time.
+  const asked = Number(req.query.days);
+  const days = Number.isInteger(asked) && asked > 0 && asked <= 3650 ? asked : null;
   const [apps] = await pool.query(
     `SELECT a.id, a.status, a.created_at, a.resume_id, r.file_name AS resume_name, i.source
      FROM applications a
      LEFT JOIN resumes r ON r.id = a.resume_id
      LEFT JOIN internships i ON i.id = a.internship_id
-     WHERE a.user_id = ?`,
-    [req.userId],
+     WHERE a.user_id = ? AND (?::int IS NULL OR a.created_at >= NOW() - (?::int * INTERVAL '1 day'))`,
+    [req.userId, days, days],
   );
   const [events] = await pool.query(
     "SELECT application_id, status, changed_at AS at FROM application_events WHERE user_id = ? ORDER BY changed_at",
